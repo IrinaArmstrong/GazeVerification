@@ -1,4 +1,4 @@
-from data_utils.sample import Sample, Samples
+from .data_utils.sample import Sample, Samples
 
 __all__ = [
     # data utils
