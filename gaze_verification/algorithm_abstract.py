@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from typeguard import typechecked
 from abc import ABC, abstractmethod
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Any
 
 from logging_handler import get_logger
 from data_utils import Sample, Samples
@@ -26,7 +26,7 @@ class AlgorithmAbstract(ABC):
     def run(
             self,
             data: Union[np.ndarray, List[float], Samples, torch.Tensor, str],
-    ) -> Optional[Samples]:
+    ) -> Optional[Union[Samples, str, Any]]:
         """
         Any custom data transform.
 

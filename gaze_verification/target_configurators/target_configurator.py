@@ -102,15 +102,16 @@ class TargetConfigurator:
         for type in TargetConfigurator.DATASET_TYPES:
             dataset_type_dict[type] = False
 
-        dataset_type = target.get("dataset_type")
+        dataset_type = target.get("dataset_type", None)
         if dataset_type in TargetConfigurator.DATASET_TYPES:
             dataset_type_dict[dataset_type] = True
-        else:
+        elif dataset_type is not None:
             warnings.warn(f"Can not define dataset type parameter for target: {target.get('name')}.\n"
                           f"{dataset_type} not in supported dataset types: {TargetConfigurator.DATASET_TYPES}",
                           f"Skipping dataset type for target.")
             # by default all set to False, so this target
             # will be skipped during datasets splitting and creation
+        # If dataset type is not set (= None), just return
         return dataset_type_dict
 
     @staticmethod

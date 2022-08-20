@@ -39,7 +39,9 @@ class Sample:
     user_id: int = None
     data: np.ndarray = None
     data_type: str = None
+    dataset_type: str = None
     stimulus_type: str = None
+    skip_sample: bool = False
     additional_attributes: Dict[str, Any] = None
 
     @property
@@ -63,6 +65,8 @@ class Sample:
             s += f" stimulus_type={self.stimulus_type}"
         if self.data_type is not None:
             s += f" data_type={self.data_type}"
+        if self.dataset_type is not None:
+            s += f" dataset_type={self.dataset_type}"
         return s
 
     def __add__(self, other: 'Sample') -> 'Sample':
