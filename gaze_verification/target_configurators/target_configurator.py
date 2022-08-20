@@ -2,6 +2,8 @@ import json
 import warnings
 from typing import List, Tuple, Dict, Union
 
+import numpy as np
+
 from gaze_verification.logging_handler import get_logger
 
 
@@ -23,12 +25,12 @@ class TargetConfigurator:
             self.original_json = json.load(f)
 
         self.targets = self._convert_json_to_dict(self.original_json)
+        # Mappings
         self.idx2target = self._get_idx2target(self.targets)
         self.target2idx = self._get_target2idx(self.idx2target)
-
+        self.datatype2idx = self._get_datatype2idx(self.targets)
+        # Encodings
         self.target2idx_ohe = self._create_one_hot_encoding(self.entities_ohe)
-
-
 
     @staticmethod
     def _convert_json_to_dict(
@@ -109,7 +111,7 @@ class TargetConfigurator:
                           f"Skipping dataset type for target.")
             # by default all set to False, so this target
             # will be skipped during datasets splitting and creation
-        return  dataset_type_dict
+        return dataset_type_dict
 
     @staticmethod
     def _get_idx2target(
@@ -149,7 +151,7 @@ class TargetConfigurator:
         target2index = {target_name: idx for idx, target_name in enumerate(idx2target)}
         return target2index
 
-    def _create_one_hot_encoding(self, targets: List[Union[int, str]]):
+    def _create_one_hot_encoding(self, targets: List[Union[int, str]]) -> np.ndarray:
         """
         Created inner mapping for one-hot encoding of targets.
         :param targets:
@@ -159,8 +161,36 @@ class TargetConfigurator:
         """
         pass
 
+    def _get_datatype2idx(self, targets: Dict[str, Union[str, bool, dict]],
+                          target2idx: Dict[str, int]) -> Dict[str, List[int]]:
+        """
+        Creates mapping between dataset type (train, validation, test, etc.)
+        and target's indexes, that belongs to it.
+        :param targets: a dict-like targets, where key is target's name.
+                        {
+                        'in_train': True,
+                        'in_validation': False,
+                        'in_test': False,
+                        }
+        :type targets: a dict,
+        :param target2idx: a mapping of target's name to target's index,
+        :type target2idx: a dict, where key is target's name,
+        :return: mapping between dataset type and targets,
+        :rtype: a dict, where key is dataset type.
+        """
+        dataset_type_dict = dict.fromkeys(TargetConfigurator.DATASET_TYPES)
+        # by default all are empty lists
+        for type in TargetConfigurator.DATASET_TYPES:
+            dataset_type_dict[type] = list()
 
-    def create_one_hot_encoding(self, targets: List[Union[int, str]], idx2target: List[str]):
+        for target_name, target in targets.items():
+            for type in TargetConfigurator.DATASET_TYPES:
+                if target.get("in_" + type, False):
+                    dataset_type_dict.append(target2idx[target_name])
+        return dataset_type_dict
+
+    def create_one_hot_encoding(self, targets: List[Union[int, str]],
+                                idx2target: List[str]) -> np.ndarray:
         """
         Encode targets as a one-hot numeric array.
         :param targets:
@@ -171,7 +201,6 @@ class TargetConfigurator:
         :rtype:
         """
         pass
-
 
     def get_idx2target(self, idx: int) -> int:
         """
@@ -204,3 +233,17 @@ class TargetConfigurator:
             )
         return self.target2idx[target_name]
 
+    def get_dataset2idx(self, dataset_type: str) -> List[int]:
+        """
+        Outputs all dataset's target's indexes based on dataset's type.
+        :param dataset_type: a dataset's type (train, validation, test, etc.),
+        :type dataset_type: str
+        :return: all dataset's target's indexes,
+        :rtype: a list of integer indexes.
+        """
+        if dataset_type in TargetConfigurator.DATASET_TYPES:
+            return self.datatype2idx.get(dataset_type)
+        else:
+            raise ValueError(f"Can not define dataset type parameter: {dataset_type}.\n"
+                             f"This type is not in supported dataset types: {TargetConfigurator.DATASET_TYPES}",
+                             f"Skipping dataset type for target.")
