@@ -46,17 +46,17 @@ class ParserAbstract(AlgorithmAbstract, ABC):
                 f"can't process further. Please, check if input samples list is empty."
             )
 
-    def run(self, data_path: str, **kwargs) -> Samples:
+    def run(self, data: str, **kwargs) -> Samples:
         """
         Run parser for datasets for classification tasks.
 
-        :param data_path: Path to csv file
-        :type data_path: str
+        :param data: Path to csv file
+        :type data: str
 
         :return: Transformed input file/folder into Samples/Session(s)
         :rtype: Samples
         """
-        return self._process_data(data_path)
+        return self._process_data(data)
 
     def _process_data(self, data_path: str) -> Samples:
         raise NotImplementedError

@@ -26,6 +26,7 @@ class AlgorithmAbstract(ABC):
     def run(
             self,
             data: Union[np.ndarray, List[float], Samples, torch.Tensor, str],
+            **kwargs
     ) -> Optional[Union[Samples, str, Any]]:
         """
         Any custom data transform.
