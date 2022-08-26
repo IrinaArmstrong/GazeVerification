@@ -7,6 +7,8 @@ from typing import List, Tuple, Dict, Union
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
 from gaze_verification.data_utils.sample import Sample, Samples
 from gaze_verification.target_configurators.target_configurator import TargetConfigurator
+from gaze_verification.target_splitters.target_splitter_abstract import TargetScheme
+from gaze_verification.target_splitters.proportions_target_splitter import ProportionsTargetSplitter
 
 
 @typechecked
@@ -31,9 +33,10 @@ class TargetConfigGenerator(AlgorithmAbstract):
         for End-to-end Eye Movement Biometrics.
     """
 
-    def __init__(self, output_dir: Union[str, Path], target_scheme: Any):
+    def __init__(self, output_dir: Union[str, Path], target_scheme: Union[str, int, TargetScheme]):
         super().__init__()
         self.output_dir = output_dir
+        self.target_scheme = target_scheme
 
     def set_output_dir(self, output_dir: Union[str, Path] = "./"):
         self.output_dir = output_dir
@@ -46,6 +49,19 @@ class TargetConfigGenerator(AlgorithmAbstract):
         :type data:  a list of Sample objects or a single Samples object,
         :return: The file name that has been generated based on provided targets.
         :rtype: str
+        """
+        # Extract unique targets from dataset
+        unique_targets = TargetConfigGenerator.extract_targets(data)
+
+        # Separate targets & samples with selected schema into splits
+        scheme = self._check_target_scheme(self.target_scheme)
+
+        # Generate targets_config
+        # Save targets_config into targets_config.json file
+
+    def _check_target_scheme(self, scheme: Union[str, int, TargetScheme]) -> TargetScheme:
+        """
+        Check validness of target scheme selection.
         """
         pass
 
