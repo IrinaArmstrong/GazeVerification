@@ -4,11 +4,10 @@ from typeguard import typechecked
 from collections import defaultdict
 from typing import List, Tuple, Dict, Union
 
+from gaze_verification.logging_handler import get_logger
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
 from gaze_verification.data_utils.sample import Sample, Samples
-from gaze_verification.target_configurators.target_configurator import TargetConfigurator
-from gaze_verification.target_splitters.target_splitter_abstract import TargetScheme
-from gaze_verification.target_splitters.proportions_target_splitter import ProportionsTargetSplitter
+from gaze_verification.target_splitters.target_scheme import TargetScheme
 
 
 @typechecked
@@ -38,6 +37,11 @@ class TargetConfigGenerator(AlgorithmAbstract):
         self.output_dir = output_dir
         self.target_scheme = target_scheme
 
+        self._logger = get_logger(
+            name=self.__class__.__name__,
+            logging_level="INFO"
+        )
+
     def set_output_dir(self, output_dir: Union[str, Path] = "./"):
         self.output_dir = output_dir
 
@@ -51,7 +55,7 @@ class TargetConfigGenerator(AlgorithmAbstract):
         :rtype: str
         """
         # Extract unique targets from dataset
-        unique_targets = TargetConfigGenerator.extract_targets(data)
+        unique_targets = TargetConfigGenerator.extract_targets(data)(**kwargs)
 
         # Separate targets & samples with selected schema into splits
         scheme = self._check_target_scheme(self.target_scheme)
@@ -59,11 +63,22 @@ class TargetConfigGenerator(AlgorithmAbstract):
         # Generate targets_config
         # Save targets_config into targets_config.json file
 
-    def _check_target_scheme(self, scheme: Union[str, int, TargetScheme]) -> TargetScheme:
+    def _check_target_scheme(self, scheme: Union[str, TargetScheme]) -> TargetScheme:
         """
         Check validness of target scheme selection.
         """
-        pass
+        if not (isinstance(scheme, str) or isinstance(scheme, TargetScheme)):
+            self._logger.error(f"Provided target scheme should a type of `str` or `TargetScheme`, ",
+                               f" provided parameter of type: {type(scheme)}")
+            raise AttributeError(f"Provided target scheme should a type of `str` or `TargetScheme`")
+        if isinstance(scheme, str):
+            if scheme not in TargetScheme.get_available_names():
+                self._logger.error(f"Provided target scheme should be one from available list: {TargetScheme.to_str()}",
+                                   f" but was given: {scheme}")
+                raise AttributeError(
+                    f"Provided target scheme should be one from available list: {TargetScheme.to_str()}")
+            return TargetScheme(scheme)
+        return TargetScheme
 
     @classmethod
     def extract_targets(cls, data: Union[List[Sample], Samples]) -> Dict[str, dict]:
