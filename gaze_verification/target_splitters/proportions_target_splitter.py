@@ -6,7 +6,7 @@ from collections import Counter, OrderedDict, defaultdict
 from typing import List, Dict, Union, Tuple
 
 from gaze_verification.data_utils.sample import Samples
-from gaze_verification.target_splitters.target_splitter_abstract import TargetSplitterAbstract
+from gaze_verification.target_splitters.target_splitter_abstract import TargetSplitterAbstract, TargetLabelType
 
 
 @typechecked
@@ -67,7 +67,7 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
 
     @staticmethod
     def _init_check(splits_proportions: List[Tuple[str, Union[float, int]]],
-                    targets: List[str],
+                    targets: List[TargetLabelType],
                     min_targets_per_split: int
                     ):
         names_checked = set()
@@ -89,9 +89,10 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
             raise Exception(
                 "In the splits argument, the sum of the proportions must not be zero."
             )
-        if proportion_sum > 1:
+        if proportion_sum > (1 + 1e-5):
             raise Exception(
-                "In the splits argument, the sum of the proportions should not exceed one."
+                "In the splits argument, the sum of the proportions should not exceed one.",
+                f" Got: {proportion_sum}"
             )
         # Check required splits proportions (minimum unique targets number per split)
         ProportionsTargetSplitter.check_selected_splits_proportions(splits_proportions,
@@ -104,7 +105,7 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
     @staticmethod
     def check_selected_splits_proportions(
             splits_proportions: List[Tuple[str, Union[float, int]]],
-            targets: List[str],
+            targets: List[TargetLabelType],
             min_targets_per_split: int = 1
     ):
         """
@@ -117,15 +118,16 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
                                    for s_name, s_prop in splits_proportions]
         min_split_name, min_split_num = min(splits_num_participants, key=lambda x: x[1])
         if min_split_num < min_targets_per_split:
+            print(splits_num_participants)
             raise ValueError(
                 f"The least populated split is `{min_split_name}`, it has only {min_split_num} unique targets,"
-                f" which is too few.",
+                f" which is too few."
                 f" The minimum number of targets for any split cannot be less than {min_targets_per_split}."
             )
 
     @staticmethod
     def splits_number_check(splits_proportions: List[Tuple[str, Union[float, int]]],
-                            targets: List[str]):
+                            targets: List[TargetLabelType]):
         n_samples = len(targets)
         n_splits = len(splits_proportions)
         if n_samples < n_splits:
@@ -135,7 +137,7 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
             )
 
     @staticmethod
-    def _inter_run_check(name: str, split_group: Samples):
+    def _inter_run_check(name: str, split_group: List[TargetLabelType]):
         if len(split_group) == 0:
             raise IndexError(f"Zero elements got into the split: {name}!")
 
@@ -170,7 +172,7 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
                 targets_per_split[split_name].append(num_samples_per_target.pop(0)[0])
         return targets_per_split
 
-    def _random_targets_split(self, targets: List[str]) -> Dict[str, List[str]]:
+    def _random_targets_split(self, targets: List[TargetLabelType]) -> Dict[str, List[TargetLabelType]]:
         """
         Randomly split targets.
         :param targets: list of dataset targets
@@ -198,19 +200,19 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
 
     def _samples_split(self,
                        data: Samples,
-                       targets: List[str],
-                       targets_split: Dict[str, List[str]],
+                       targets: List[TargetLabelType],
+                       targets_split: Dict[str, List[TargetLabelType]],
                        ) -> Dict[str, Samples]:
         """
         Split and (optionally) shuffle samples based on defined targets split
         """
         result = dict()
-        for split_name, split_targets in targets_split:
+        for split_name, split_targets in targets_split.items():
             mask = list(map(lambda x: x in split_targets, targets))
-            result[split_name] = list(compress(data, mask))
+            result[split_name] = Samples(list(compress(data, mask)))
         return result
 
-    def run(self, data: Samples, **kwargs) -> Tuple[Dict[str, Samples], Dict[str, List[str]]]:
+    def run(self, data: Samples, **kwargs) -> Tuple[Dict[str, Samples], Dict[str, List[TargetLabelType]]]:
         """
         Splits samples into train, validation & test sets.
         :param data: samples to split
@@ -230,8 +232,8 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
                                                 targets=targets,
                                                 targets_split=targets_split)
         else:
-            self._logger.info("Selected ordered splitting strategy: ",
-                              "N1 larger classes will belong to the first split, ",
+            self._logger.info("Selected ordered splitting strategy: "
+                              "N1 larger classes will belong to the first split, "
                               "N2 next in size to the second, etc.")
             targets_split = self._ordered_targets_split(targets=targets)
             samples_split = self._samples_split(data=data,
@@ -239,3 +241,17 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
                                                 targets_split=targets_split)
         self._log_split_result(result=samples_split)
         return samples_split, targets_split
+
+    def run_samples_split(self,
+                          data: Samples,
+                          targets_split: Dict[str, List[TargetLabelType]],
+                          ) -> Dict[str, Samples]:
+        """
+        Split and (optionally) shuffle samples based on defined targets split
+        """
+        # get list of target values (per sample)
+        targets = self.extract_targets(data=data)
+        samples_split = self._samples_split(data=data,
+                                            targets=targets,
+                                            targets_split=targets_split)
+        return samples_split

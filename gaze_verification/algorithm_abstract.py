@@ -4,8 +4,8 @@ from typeguard import typechecked
 from abc import ABC, abstractmethod
 from typing import Optional, Union, List, Any
 
-from logging_handler import get_logger
-from data_utils import Sample, Samples
+from gaze_verification.logging_handler import get_logger
+from gaze_verification.data_utils import Samples
 
 
 @typechecked

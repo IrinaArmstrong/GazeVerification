@@ -2,7 +2,6 @@ import enum
 from gaze_verification.target_splitters.proportions_target_splitter import ProportionsTargetSplitter
 from gaze_verification.target_splitters.timebased_target_splitter import TimebasedTargetSplitter
 
-
 @enum.unique
 class TargetScheme(enum.Enum):
     """
@@ -21,7 +20,7 @@ class TargetScheme(enum.Enum):
     [2] Lohr, D.J., & Komogortsev, O.V. (2022). Eye Know You Too: A DenseNet Architecture
         for End-to-end Eye Movement Biometrics.
     """
-    RANDOM_SPLIT = ProportionsTargetSplitter
+    PROPORTIONS_SPLIT = ProportionsTargetSplitter
     TIME_DEPENDED_SPLIT = TimebasedTargetSplitter
 
     def get_value(self):

@@ -2,12 +2,14 @@
 import numpy as np
 from typeguard import typechecked
 from abc import ABC, abstractmethod
-from typing import List, Dict, Union
+from typing import List, Dict, Union, TypeVar
 
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
 from gaze_verification.data_utils.sample import Sample, Samples
 
+# Assumes that targets labels can be anything: str, int, etc.
+TargetLabelType = TypeVar("TargetLabelType")
 
 @typechecked
 class TargetSplitterAbstract(AlgorithmAbstract, ABC):
@@ -26,7 +28,7 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         self.seed = seed
 
     @classmethod
-    def extract_targets(cls, data: Samples) -> List[str]:
+    def extract_targets(cls, data: Samples) -> List[TargetLabelType]:
         """
         Extracts targets from the samples
         :param data: Samples
