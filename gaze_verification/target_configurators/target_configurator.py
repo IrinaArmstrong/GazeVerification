@@ -1,6 +1,6 @@
 import json
 import warnings
-from typing import List, Tuple, Dict, Union
+from typing import List, Any, Dict, Union, Set
 
 import numpy as np
 
@@ -9,19 +9,21 @@ from gaze_verification.logging_handler import get_logger
 
 class TargetConfigurator:
     """
-
+    Manages the configuration of targets within the experiment.
+    Based on the input file 'targets_config.json' with the configuration of classes,
+    it enables mapping of the target to its index (target2idx).
+    Also filters the input data by predefined splits dataset (train/validation/test).
     """
-    DATASET_TYPES = ['train', 'validation', 'test']
 
-    def __init__(self, entity_config_path: str):
+    def __init__(self, targets_config_path: str):
 
         self._logger = get_logger(
             name=self.__class__.__name__,
             logging_level="INFO"
         )
-
-        self.entity_config_path = entity_config_path
-        with open(self.entity_config_path, encoding="utf-8") as f:
+        # Load config
+        self.targets_config_path = targets_config_path
+        with open(self.targets_config_path, encoding="utf-8") as f:
             self.original_json = json.load(f)
 
         self.targets = self._convert_json_to_dict(self.original_json)
@@ -32,21 +34,24 @@ class TargetConfigurator:
         # Encodings
         self.target2idx_ohe = self._create_one_hot_encoding(self.entities_ohe)
 
-    @staticmethod
     def _convert_json_to_dict(
-            targets_json: List[Dict[str, Union[str, bool, list]]]
-    ) -> Dict[str, Dict[str, Union[int, dict, bool, str]]]:
+            self,
+            targets_json: Dict[str, dict]
+    ) -> Dict[str, dict]:
 
         """
         Converts input json into dict with information about targets expected to appear in data.
+        So then skip targets with attribute 'skip' set to true.
 
         :param targets_json:
             JSON structure:
-            [...,
-             {'name': 'Участник #1',
-             "dataset_type": 'train'
-             'skip': False}
-             ...]
+            {...,
+            'Участник #1': {
+                "dataset_type": 'train'
+                'skip': False
+                }
+             ...
+             }
 
         :return: a dict:
 
@@ -64,19 +69,38 @@ class TargetConfigurator:
         targets_dict = dict()
         target_idx = -1
 
-        for target in targets_json:
-            to_skip = target["skip"]
+        # extract datasets that exists in targets config
+        self.dataset_type_names = TargetConfigurator._extract_datasets_type_names(targets_json)
+
+        for target_name, target_attrs in targets_json.items():
+            to_skip = target_attrs["skip"]
             if not to_skip:
-                target_name = to_skip["name"]
                 target_idx += 1
                 targets_dict[target_name] = {
                     "idx": target_idx,
-                    "attributes": TargetConfigurator._configure_dataset_type(target),
+                    "attributes": TargetConfigurator._configure_dataset_type(target_attrs),
                 }
         return targets_dict
 
     @staticmethod
-    def _configure_dataset_type(target: Dict[str, Union[str, bool, List[dict]]]) -> dict:
+    def _extract_datasets_type_names(targets: Dict[str, Any]) -> Set[str]:
+        """
+        Extract from provided data dataset type names.
+        :param targets: a dict with structure:
+                        {...,
+                        'Участник #1': {
+                            "dataset_type": 'train'
+                            'skip': False
+                            }
+                         ...
+                        }
+        :type targets: a dict
+        :return: a set of dataset's type names,
+        :rtype: a set.
+        """
+        return set([target_attrs.get("dataset_type") for _, target_attrs in targets.items()])
+
+    def _configure_dataset_type(self, target: Dict[str, Any]) -> dict:
         """
         Converts string representation of dataset type for target (to which it belongs)
         to boolean flags dict.
@@ -97,17 +121,17 @@ class TargetConfigurator:
                         }
         :rtype: a dict
         """
-        dataset_type_dict = dict.fromkeys(TargetConfigurator.DATASET_TYPES)
+        dataset_type_dict = dict.fromkeys(self.dataset_type_names)
         # by default all set to False
-        for type in TargetConfigurator.DATASET_TYPES:
-            dataset_type_dict[type] = False
+        for default_dataset_type in self.dataset_type_names:
+            dataset_type_dict[default_dataset_type] = False
 
         dataset_type = target.get("dataset_type", None)
-        if dataset_type in TargetConfigurator.DATASET_TYPES:
+        if dataset_type in self.dataset_type_namesS:
             dataset_type_dict[dataset_type] = True
         elif dataset_type is not None:
             warnings.warn(f"Can not define dataset type parameter for target: {target.get('name')}.\n"
-                          f"{dataset_type} not in supported dataset types: {TargetConfigurator.DATASET_TYPES}",
+                          f"{dataset_type} not in supported dataset types: {self.dataset_type_names}"
                           f"Skipping dataset type for target.")
             # by default all set to False, so this target
             # will be skipped during datasets splitting and creation

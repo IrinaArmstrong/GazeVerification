@@ -140,11 +140,9 @@ class TargetConfigGenerator(AlgorithmAbstract):
                 continue
 
             unique_targets[target_name] = {
-                # TODO: generate dataset split in Target Generator!
-                # "dataset_type": sample.dataset_type,
                 "skip": sample.skip_sample
             }
-        return unique_targets
+        return dict(unique_targets)
 
     @classmethod
     def construct_targets_config(
