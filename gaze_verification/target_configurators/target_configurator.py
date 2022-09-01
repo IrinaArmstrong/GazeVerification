@@ -1,12 +1,14 @@
 import json
-import warnings
-from typing import List, Any, Dict, Union, Set
-
 import numpy as np
+from typeguard import typechecked
+from typing import List, Any, Dict, Union, Set, Tuple
 
+from gaze_verification.data_utils.sample import Samples
 from gaze_verification.logging_handler import get_logger
+from gaze_verification.target_splitters.target_splitter_abstract import TargetSplitterAbstract
 
 
+@typechecked
 class TargetConfigurator:
     """
     Manages the configuration of targets within the experiment.
@@ -30,7 +32,8 @@ class TargetConfigurator:
         # Mappings
         self.idx2target = self._get_idx2target(self.targets)
         self.target2idx = self._get_target2idx(self.idx2target)
-        self.datatype2idx = self._get_datatype2idx(self.targets)
+        self.datatype2idx, self.datatype2names = self._get_datatypes_mappings(self.targets,
+                                                                              self.target2idx)
         # Encodings
         self.target2idx_ohe = self._create_one_hot_encoding(self.entities_ohe)
 
@@ -59,9 +62,9 @@ class TargetConfigurator:
             "Участник #1": {
                 "idx": 4,
                 "attributes": {
-                    'in_train': True,
-                    'in_validation': False,
-                    'in_test': False,
+                    ...,
+                    "dataset_type": 'train',
+                    ...,
                     }
                 }
             }
@@ -73,12 +76,12 @@ class TargetConfigurator:
         self.dataset_type_names = TargetConfigurator._extract_datasets_type_names(targets_json)
 
         for target_name, target_attrs in targets_json.items():
-            to_skip = target_attrs["skip"]
+            to_skip = target_attrs.pop("skip")
             if not to_skip:
                 target_idx += 1
                 targets_dict[target_name] = {
                     "idx": target_idx,
-                    "attributes": TargetConfigurator._configure_dataset_type(target_attrs),
+                    "attributes": target_attrs,
                 }
         return targets_dict
 
@@ -98,45 +101,14 @@ class TargetConfigurator:
         :return: a set of dataset's type names,
         :rtype: a set.
         """
-        return set([target_attrs.get("dataset_type") for _, target_attrs in targets.items()])
-
-    def _configure_dataset_type(self, target: Dict[str, Any]) -> dict:
-        """
-        Converts string representation of dataset type for target (to which it belongs)
-        to boolean flags dict.
-        Currently supported types: c.
-        Other dataset types labels will be skipped.
-        :param target: a dict with structure:
-                        {
-                        ...,
-                        "dataset_type": 'train',
-                        ...
-                        }
-        :type target: a dict
-        :return: a dict with structure:
-                        {
-                        'in_train': True,
-                        'in_validation': False,
-                        'in_test': False,
-                        }
-        :rtype: a dict
-        """
-        dataset_type_dict = dict.fromkeys(self.dataset_type_names)
-        # by default all set to False
-        for default_dataset_type in self.dataset_type_names:
-            dataset_type_dict[default_dataset_type] = False
-
-        dataset_type = target.get("dataset_type", None)
-        if dataset_type in self.dataset_type_namesS:
-            dataset_type_dict[dataset_type] = True
-        elif dataset_type is not None:
-            warnings.warn(f"Can not define dataset type parameter for target: {target.get('name')}.\n"
-                          f"{dataset_type} not in supported dataset types: {self.dataset_type_names}"
-                          f"Skipping dataset type for target.")
-            # by default all set to False, so this target
-            # will be skipped during datasets splitting and creation
-        # If dataset type is not set (= None), just return
-        return dataset_type_dict
+        dataset_type_names = set()
+        for target_name, target_attrs in targets.items():
+            dataset_type = target_attrs.get("dataset_type", None)
+            if dataset_type is None:
+                raise AttributeError(f"Dataset type name is not set for the target, "
+                                     "but it is required for correct experiment configuration.")
+            dataset_type_names.add(dataset_type)
+        return dataset_type_names
 
     @staticmethod
     def _get_idx2target(
@@ -186,33 +158,45 @@ class TargetConfigurator:
         """
         pass
 
-    def _get_datatype2idx(self, targets: Dict[str, Union[str, bool, dict]],
-                          target2idx: Dict[str, int]) -> Dict[str, List[int]]:
+    def _get_datatypes_mappings(self, targets: Dict[str, Union[str, bool, dict]],
+                                target2idx: Dict[str, int]) -> Tuple[Dict[str, List[int]],
+                                                                     Dict[str, List[str]]]:
         """
-        Creates mapping between dataset type (train, validation, test, etc.)
-        and target's indexes, that belongs to it.
+        Creates two mappings between dataset type (train, validation, test, etc.)
+        and target's that belongs to it with their:
+            1) indexes,
+            2) names,
         :param targets: a dict-like targets, where key is target's name.
                         {
-                        'in_train': True,
-                        'in_validation': False,
-                        'in_test': False,
+                            "Участник #1": {
+                                "idx": 4,
+                                "attributes": {
+                                    ...,
+                                    "dataset_type": 'train',
+                                    ...,
+                                    }
+                                }
                         }
         :type targets: a dict,
         :param target2idx: a mapping of target's name to target's index,
         :type target2idx: a dict, where key is target's name,
-        :return: mapping between dataset type and targets,
-        :rtype: a dict, where key is dataset type.
+        :return: mappings between dataset type and targets:
+            1) indexes,
+            2) names,
+        :rtype: two dicts, where keys are dataset type.
         """
-        dataset_type_dict = dict.fromkeys(TargetConfigurator.DATASET_TYPES)
+        dataset_type_to_idx = dict.fromkeys(self.dataset_type_names)
+        dataset_type_to_name = dict.fromkeys(self.dataset_type_names)
         # by default all are empty lists
-        for type in TargetConfigurator.DATASET_TYPES:
-            dataset_type_dict[type] = list()
+        for default_dataset_type in self.dataset_type_names:
+            dataset_type_to_idx[default_dataset_type] = list()
+            dataset_type_to_name[default_dataset_type] = list()
 
-        for target_name, target in targets.items():
-            for type in TargetConfigurator.DATASET_TYPES:
-                if target.get("in_" + type, False):
-                    dataset_type_dict.append(target2idx[target_name])
-        return dataset_type_dict
+        for target_name, target_attrs in targets.items():
+            targets_dataset_type = target_attrs.get("dataset_type")
+            dataset_type_to_idx[targets_dataset_type].append(target2idx[target_name])
+            dataset_type_to_name[targets_dataset_type].append(target_name)
+        return dataset_type_to_idx, dataset_type_to_name
 
     def create_one_hot_encoding(self, targets: List[Union[int, str]],
                                 idx2target: List[str]) -> np.ndarray:
@@ -227,7 +211,7 @@ class TargetConfigurator:
         """
         pass
 
-    def get_idx2target(self, idx: int) -> int:
+    def get_idx2target(self, idx: int) -> str:
         """
         Outputs target's name based on it's index.
         :param idx: a target's index,
@@ -266,9 +250,20 @@ class TargetConfigurator:
         :return: all dataset's target's indexes,
         :rtype: a list of integer indexes.
         """
-        if dataset_type in TargetConfigurator.DATASET_TYPES:
+        if dataset_type in self.dataset_type_names:
             return self.datatype2idx.get(dataset_type)
         else:
             raise ValueError(f"Can not define dataset type parameter: {dataset_type}.\n"
-                             f"This type is not in supported dataset types: {TargetConfigurator.DATASET_TYPES}",
+                             f"This type is not in supported dataset types: {self.dataset_type_names}",
                              f"Skipping dataset type for target.")
+
+    def split_samples(self, data: Samples) -> Dict[str, Samples]:
+        """
+        Split and (optionally) shuffle samples based on defined targets split
+        """
+        # get list of target values (per sample)
+        targets = TargetSplitterAbstract.extract_targets(data=data)
+        samples_split = TargetSplitterAbstract._split_samples(data=data,
+                                                              targets=targets,
+                                                              targets_split=self.datatype2names)
+        return samples_split
