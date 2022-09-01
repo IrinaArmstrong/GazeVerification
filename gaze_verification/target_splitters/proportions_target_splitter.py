@@ -1,6 +1,5 @@
 import random
 import numpy as np
-from itertools import compress
 from typeguard import typechecked
 from collections import Counter, OrderedDict, defaultdict
 from typing import List, Dict, Union, Tuple
@@ -198,20 +197,6 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
             proportion_start = proportion_end
         return result
 
-    def _samples_split(self,
-                       data: Samples,
-                       targets: List[TargetLabelType],
-                       targets_split: Dict[str, List[TargetLabelType]],
-                       ) -> Dict[str, Samples]:
-        """
-        Split and (optionally) shuffle samples based on defined targets split
-        """
-        result = dict()
-        for split_name, split_targets in targets_split.items():
-            mask = list(map(lambda x: x in split_targets, targets))
-            result[split_name] = Samples(list(compress(data, mask)))
-        return result
-
     def run(self, data: Samples, **kwargs) -> Tuple[Dict[str, Samples], Dict[str, List[TargetLabelType]]]:
         """
         Splits samples into train, validation & test sets.
@@ -219,7 +204,7 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
         :return: dictionary where are the key is name of the fold and value is data
         """
         # get list of target values (per sample)
-        targets = self.extract_targets(data=data)
+        targets = ProportionsTargetSplitter.extract_targets(data=data)
         ProportionsTargetSplitter._init_check(self.splits_proportions,
                                               targets,
                                               self.min_targets_per_split)
@@ -228,30 +213,30 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
                 f"Randomized splitting selected (seed={self.seed})"
             )
             targets_split = self._random_targets_split(targets=targets)
-            samples_split = self._samples_split(data=data,
-                                                targets=targets,
-                                                targets_split=targets_split)
+            samples_split = ProportionsTargetSplitter._split_samples(data=data,
+                                                                     targets=targets,
+                                                                     targets_split=targets_split)
         else:
             self._logger.info("Selected ordered splitting strategy: "
                               "N1 larger classes will belong to the first split, "
                               "N2 next in size to the second, etc.")
             targets_split = self._ordered_targets_split(targets=targets)
-            samples_split = self._samples_split(data=data,
-                                                targets=targets,
-                                                targets_split=targets_split)
+            samples_split = ProportionsTargetSplitter._split_samples(data=data,
+                                                                     targets=targets,
+                                                                     targets_split=targets_split)
         self._log_split_result(result=samples_split)
         return samples_split, targets_split
 
-    def run_samples_split(self,
-                          data: Samples,
+    @staticmethod
+    def run_samples_split(data: Samples,
                           targets_split: Dict[str, List[TargetLabelType]],
                           ) -> Dict[str, Samples]:
         """
         Split and (optionally) shuffle samples based on defined targets split
         """
         # get list of target values (per sample)
-        targets = self.extract_targets(data=data)
-        samples_split = self._samples_split(data=data,
-                                            targets=targets,
-                                            targets_split=targets_split)
+        targets = TargetSplitterAbstract.extract_targets(data=data)
+        samples_split = TargetSplitterAbstract._split_samples(data=data,
+                                                              targets=targets,
+                                                              targets_split=targets_split)
         return samples_split

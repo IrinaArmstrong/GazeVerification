@@ -1,5 +1,5 @@
-
 import numpy as np
+from itertools import compress
 from typeguard import typechecked
 from abc import ABC, abstractmethod
 from typing import List, Dict, Union, TypeVar
@@ -10,6 +10,7 @@ from gaze_verification.data_utils.sample import Sample, Samples
 
 # Assumes that targets labels can be anything: str, int, etc.
 TargetLabelType = TypeVar("TargetLabelType")
+
 
 @typechecked
 class TargetSplitterAbstract(AlgorithmAbstract, ABC):
@@ -27,8 +28,8 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         self.is_random = is_random
         self.seed = seed
 
-    @classmethod
-    def extract_targets(cls, data: Samples) -> List[TargetLabelType]:
+    @staticmethod
+    def extract_targets(data: Samples) -> List[TargetLabelType]:
         """
         Extracts targets from the samples
         :param data: Samples
@@ -36,9 +37,23 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         targets = [sample.user_id for sample in data]
         return targets
 
+    @staticmethod
+    def _split_samples(data: Samples,
+                       targets: List[TargetLabelType],
+                       targets_split: Dict[str, List[TargetLabelType]],
+                       ) -> Dict[str, Samples]:
+        """
+        Split and (optionally) shuffle samples based on defined targets split
+        """
+        result = dict()
+        for split_name, split_targets in targets_split.items():
+            mask = list(map(lambda x: x in split_targets, targets))
+            result[split_name] = Samples(list(compress(data, mask)))
+        return result
+
     def _log_split_result(self, result: Dict[str, Samples]):
         """
-        Logging slitted dataset distributionand proportions.
+        Logging slitted dataset distribution and proportions.
         :param result: splitted samples,
         :type result: dict, where a key is a dataset type naming,
         """
