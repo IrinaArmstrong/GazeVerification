@@ -1,0 +1,38 @@
+{
+    "0": {
+        "skip": false,
+        "dataset_type": "train"
+    },
+    "1": {
+        "skip": false,
+        "dataset_type": "train"
+    },
+    "2": {
+        "skip": false,
+        "dataset_type": "train"
+    },
+    "3": {
+        "skip": false,
+        "dataset_type": "train"
+    },
+    "4": {
+        "skip": false,
+        "dataset_type": "test"
+    },
+    "5": {
+        "skip": false,
+        "dataset_type": "test"
+    },
+    "6": {
+        "skip": false,
+        "dataset_type": "validation"
+    },
+    "7": {
+        "skip": false,
+        "dataset_type": "validation"
+    },
+    "8": {
+        "skip": true,
+        "dataset_type": "train"
+    }
+}
