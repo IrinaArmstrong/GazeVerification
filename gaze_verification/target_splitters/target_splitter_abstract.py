@@ -6,7 +6,7 @@ from typing import List, Dict, Union, TypeVar
 
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
-from gaze_verification.data_utils.sample import Sample, Samples
+from gaze_verification.data_objects.sample import Sample, Samples
 
 # Assumes that targets labels can be anything: str, int, etc.
 TargetLabelType = TypeVar("TargetLabelType")

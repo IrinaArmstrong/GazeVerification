@@ -4,7 +4,7 @@ from typeguard import typechecked
 from collections import Counter, OrderedDict, defaultdict
 from typing import List, Dict, Union, Tuple
 
-from gaze_verification.data_utils.sample import Samples
+from gaze_verification.data_objects.sample import Samples
 from gaze_verification.target_splitters.target_splitter_abstract import TargetSplitterAbstract, TargetLabelType
 
 

@@ -5,7 +5,7 @@ from typing import Union, List
 
 from gaze_verification.parsers.parser_utils import is_dir_empty
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
-from gaze_verification.data_utils.sample import Sample, Samples
+from gaze_verification.data_objects.sample import Sample, Samples
 
 
 class ParserAbstract(AlgorithmAbstract, ABC):

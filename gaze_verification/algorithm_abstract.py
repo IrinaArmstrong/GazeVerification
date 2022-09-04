@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Union, List, Any
 
 from gaze_verification.logging_handler import get_logger
-from gaze_verification.data_utils import Samples
+from gaze_verification.data_objects import Samples
 
 
 @typechecked

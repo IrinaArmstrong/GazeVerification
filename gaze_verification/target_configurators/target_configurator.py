@@ -3,7 +3,7 @@ import numpy as np
 from typeguard import typechecked
 from typing import List, Any, Dict, Union, Set, Tuple
 
-from gaze_verification.data_utils.sample import Samples
+from gaze_verification.data_objects.sample import Samples
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.target_splitters.target_splitter_abstract import TargetSplitterAbstract
 
@@ -34,8 +34,6 @@ class TargetConfigurator:
         self.target2idx = self._get_target2idx(self.idx2target)
         self.datatype2idx, self.datatype2names = self._get_datatypes_mappings(self.targets,
                                                                               self.target2idx)
-        # Encodings
-        self.target2idx_ohe = self._create_one_hot_encoding(self.entities_ohe)
 
     def _convert_json_to_dict(
             self,
@@ -112,7 +110,7 @@ class TargetConfigurator:
 
     @staticmethod
     def _get_idx2target(
-            targets: Dict[str, Dict[str, Union[int, list, None]]]
+            targets: Dict[str, dict]
     ) -> List[str]:
         """
         Created a mapping of target's index to target itself.
@@ -193,7 +191,7 @@ class TargetConfigurator:
             dataset_type_to_name[default_dataset_type] = list()
 
         for target_name, target_attrs in targets.items():
-            targets_dataset_type = target_attrs.get("dataset_type")
+            targets_dataset_type = target_attrs.get("attributes").get("dataset_type")
             dataset_type_to_idx[targets_dataset_type].append(target2idx[target_name])
             dataset_type_to_name[targets_dataset_type].append(target_name)
         return dataset_type_to_idx, dataset_type_to_name
