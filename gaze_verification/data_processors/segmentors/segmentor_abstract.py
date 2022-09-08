@@ -35,11 +35,11 @@ class SegmentorAbstract(AlgorithmAbstract, ABC):
         :return: Samples object containing N formatted Samples
         :rtype: Samples
         """
-        dataset = self.build_samples_dataset(data)
+        dataset = self.build_segmented_dataset(data)
         return dataset
 
     @abstractmethod
-    def build_samples_dataset(self, samples: Samples) -> Samples:
+    def build_segmented_dataset(self, samples: Samples) -> Samples:
         """
         Create a new dataset containing segmented and formatted Samples.
 
@@ -54,8 +54,7 @@ class SegmentorAbstract(AlgorithmAbstract, ABC):
     @abstractmethod
     def build_segments(self, sample: Sample) -> List[Sample]:
         """
-        Segment data sequences from Samples on M parts, each with selected length L
-        according to predefined logic.
+        Segment data sequences from Samples on M parts according to predefined logic.
 
         :param sample: Sample object containing information about one Sample
         :type sample: Sample
