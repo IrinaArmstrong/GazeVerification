@@ -174,7 +174,6 @@ class Samples:
 
         :param **kwargs: contains useful additional keys for serialization engines.
         """
-
         if n_samples == -1:
             n_samples = len(self)
 
@@ -306,9 +305,8 @@ class Samples:
             return cls._load(path, engine, n_samples)
         except Exception as e:
             raise Exception(
-                f"Could not load Instances due to the error. "
-                f"Check if the path is correct and the AutoNER version "
-                f"is the same. {e}")
+                f"Could not load Samples due to the error. "
+                f"Check if the path is correct {e}")
 
     @classmethod
     def load_json(cls, path: str, n_samples: int = -1):

@@ -10,7 +10,7 @@ DataType = TypeVar("DataType")
 def generative_sliding_window_1d(sequence: Union[list, tuple, np.ndarray],
                                  window_size: int = 2,
                                  step: int = 2,
-                                 fill_value: DataType = None) -> Generator[DataType]:
+                                 fill_value: DataType = None) -> Generator[DataType, None, None]:
     """
     Performs a rolling window (aka sliding window) iterable over a sequence/iterator/generator.
     :param sequence: a sequence to iterate over,
@@ -51,7 +51,7 @@ def sequential_sliding_window_1d(data: Union[list, tuple, np.ndarray], window_si
     """
     Generated a sequence of 1d sliding windows over input M-dim data.
     :param data: input data for windows generating,
-    :type data: array-like types: list, tuple, np.array ...
+    :type data: array-like types: list, tuple, np.array - are required to be convertible to np.array!
     :param window_size: the sizes of sliding window,
     :type window_size: tuple,
     :param dx: a step over horizontal axis (x),
@@ -78,7 +78,7 @@ def sequential_sliding_window_2d(data: Union[list, tuple, np.ndarray], window_si
     """
     Generated a sequence of 2d sliding windows over input M-dim data.
     :param data: input data for windows generating,
-    :type data: array-like types: list, tuple, np.array ...
+    :type data: array-like types: list, tuple, np.array - are required to be convertible to np.array!
     :param window_size: the sizes of sliding window,
     :type window_size: tuple,
     :param dx: a step over horizontal axis (x),
@@ -109,3 +109,19 @@ def sequential_sliding_window_2d(data: Union[list, tuple, np.ndarray], window_si
     strides += data_.strides[-2:]  # a step over windows
 
     return np.lib.stride_tricks.as_strided(data_, shape=shape, strides=strides)
+
+
+def rearrange_dimensions(data: Union[list, tuple, np.ndarray], new_order: str) -> np.ndarray:
+    """
+    Permute the axes of an array with selected order using the Einstein summation convention on the operands.
+    returns
+    :param data: input data,
+    :type data: array-like types: list, tuple, np.array - are required to be convertible to np.array!
+    :param new_order: specifies the subscripts for summation as comma separated list of subscript labels.
+                        Example: 'ijk->jik' - switches the first and the second dimensions of array.
+    see more: https://numpy.org/doc/stable/reference/generated/numpy.einsum.html
+    :type new_order: str,
+    :return: the modified array,
+    :rtype: np.array.
+    """
+    return np.einsum(new_order, data)
