@@ -1,10 +1,10 @@
 import unittest
 from pathlib import Path
 from gaze_verification.data_objects.sample import Sample, Samples
-from gaze_verification.data_processors.segmentors.nonoverlapping_segmentor import NonOverlappingSegmentor
+from gaze_verification.data_processors.segmentors.overlapping_segmentor import OverlappingSegmentor
 
 
-class TestNonOverlappingSegmentor(unittest.TestCase):
+class TestOverlappingSegmentor(unittest.TestCase):
 
     def __init__(self, method_name="runTest"):
         super().__init__(method_name)
@@ -19,15 +19,20 @@ class TestNonOverlappingSegmentor(unittest.TestCase):
         min_completness_ratio = 0.5
 
         for segment_length in range(2, n_elements):
+            # for experiments
+            segmentation_step = segment_length - 1
+
             # expected
-            n_complete_segments = n_elements // segment_length
-            completness_ratio = (n_elements - n_complete_segments * segment_length) / segment_length
+            n_complete_segments = ((n_elements - segment_length) // segmentation_step) + 1
+            expected_padding = (segment_length - 1) / 2
+            completness_ratio = (segment_length - expected_padding) / segment_length
             n_incomplete_segments = 1 if completness_ratio >= min_completness_ratio else 0
             expected_segment_size = (n_dims, segment_length)
 
-            segmentor = NonOverlappingSegmentor(segment_length=segment_length,
-                                                min_completness_ratio=min_completness_ratio,
-                                                fill_value=-100.0)
+            segmentor = OverlappingSegmentor(segment_length=segment_length,
+                                             segmentation_step=segmentation_step,
+                                             min_completness_ratio=min_completness_ratio,
+                                             fill_value=-100.0)
             segmented_sample = segmentor.run(init_sample)
 
             # resulted
