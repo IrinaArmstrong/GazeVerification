@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List
 
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
@@ -8,8 +7,11 @@ from gaze_verification.data_objects.sample import Sample, Samples
 
 class FilterAbstract(AlgorithmAbstract, ABC):
     """
-    Abstract class for all data segmentors.
+    Raw eye gaze positions may contain noise. The presence of noise makes it difficult to estimate
+    the velocity and acceleration parameters using differentiation operation.
+    Thus, filtering is a necessary operation for the stable algorithms performance.
 
+    Abstract class for all data filters.
     Functionality:
     Define the interface for most part of methods for data Samples segmentation process.
 
@@ -29,11 +31,37 @@ class FilterAbstract(AlgorithmAbstract, ABC):
         """
         Process Instances to create new segmented ones.
 
-        :param data: Samples containing N formatted Samples
+        :param data: Samples containing N filtered Samples
         :type data: Samples
 
-        :return: Samples object containing N formatted Samples
+        :return: Samples object containing N filtered Samples
         :rtype: Samples
         """
-        dataset = self.build_segmented_dataset(data)
+        dataset = self.filter_dataset(data)
         return dataset
+
+    @abstractmethod
+    def filter_dataset(self, samples: Samples) -> Samples:
+        """
+        Create a new dataset containing filtered Samples.
+
+        :param samples: DataClass containing N filtered Samples
+        :type samples: Instances
+
+        :return: Samples object containing N filtered Samples
+        :rtype: Samples
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def filter_sample(self, sample: Sample) -> Sample:
+        """
+        Filter data sequences from Samples according to predefined logic.
+
+        :param sample: Sample object containing information about one Sample
+        :type sample: Sample
+
+        :return: Sample object with filtered data field,
+        :rtype: Sample
+        """
+        raise NotImplementedError

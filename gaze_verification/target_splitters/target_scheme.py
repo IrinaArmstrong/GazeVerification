@@ -2,6 +2,7 @@ import enum
 from gaze_verification.target_splitters.proportions_target_splitter import ProportionsTargetSplitter
 from gaze_verification.target_splitters.timebased_target_splitter import TimebasedTargetSplitter
 
+
 @enum.unique
 class TargetScheme(enum.Enum):
     """

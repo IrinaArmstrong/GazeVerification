@@ -43,7 +43,7 @@ class SegmentorAbstract(AlgorithmAbstract, ABC):
         """
         Create a new dataset containing segmented and formatted Samples.
 
-        :param samples: DataClass containing N formatted Instances
+        :param samples: DataClass containing N formatted Samples
         :type samples: Instances
 
         :return: Samples object containing N formatted Samples
