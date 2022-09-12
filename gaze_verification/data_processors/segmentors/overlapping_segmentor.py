@@ -41,8 +41,8 @@ class OverlappingSegmentor(SegmentorAbstract):
         """
         Create a new dataset containing segmented and formatted Samples.
 
-        :param samples: DataClass containing N formatted Instances
-        :type samples: Instances
+        :param samples: DataClass containing N formatted Samples
+        :type samples: Samples
 
         :return: Samples object containing N formatted Samples
         :rtype: Samples

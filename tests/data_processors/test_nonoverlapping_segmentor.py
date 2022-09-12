@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from gaze_verification.data_objects.sample import Sample, Samples
+from gaze_verification.data_objects.sample import Samples
 from gaze_verification.data_processors.segmentors.nonoverlapping_segmentor import NonOverlappingSegmentor
 
 
@@ -9,7 +9,7 @@ class TestNonOverlappingSegmentor(unittest.TestCase):
     def __init__(self, method_name="runTest"):
         super().__init__(method_name)
         self._current_dir = Path().resolve()
-        self._init_data_path = self._current_dir / "test_data_samples" / "samples.pickle"
+        self._init_data_path = self._current_dir / "test_data_samples" / "segmentation_samples.pickle"
 
     def test_segmentation(self):
         init_sample = Samples.load_pickle(str(self._init_data_path))
