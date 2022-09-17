@@ -6,7 +6,7 @@ from typing import List, Union, Optional
 
 from gaze_verification.data_objects.sample import Sample, Samples
 from gaze_verification.data_processors.filters.filter_abstract import FilterAbstract
-from gaze_verification.data_processors.filters.filtration_utils import Derivative
+from gaze_verification.data_processors.filters.filtration_utils import DerivativeOrder
 
 
 @typechecked
@@ -45,7 +45,7 @@ class SavitzkyGolayFilter1D(FilterAbstract):
                  window_size: int,
                  order: int,
                  rate: Optional[int] = 1,
-                 deriviate: Optional[Union[str, int, Derivative]] = Derivative.NONE,
+                 deriviate: Optional[Union[str, int, DerivativeOrder]] = DerivativeOrder.NONE,
                  keep_erroneous_samples: bool = True,
                  verbose: bool = True):
         super().__init__(verbose)
@@ -73,35 +73,35 @@ class SavitzkyGolayFilter1D(FilterAbstract):
         if self.window_size < self.order + 2:
             raise TypeError(f"Window size = {self.window_size} is too small for the polynomials order = {self.order}")
 
-    def _check_derivative(self, derivative: Union[str, int, Derivative]) -> Derivative:
+    def _check_derivative(self, derivative: Union[str, int, DerivativeOrder]) -> DerivativeOrder:
         """
         Check validness of derivative selection.
         """
-        if not (isinstance(derivative, str) or isinstance(derivative, int) or isinstance(derivative, Derivative)):
+        if not (isinstance(derivative, str) or isinstance(derivative, int) or isinstance(derivative, DerivativeOrder)):
             self._logger.error(f"Provided derivative should a type of `str`, `int` or `Derivative`, ",
                                f" provided parameter of type: {type(derivative)}")
             raise AttributeError(f"Provided derivative should a type of `str`, `int` or `Derivative`")
 
         if isinstance(derivative, str):
-            if derivative not in Derivative.get_available_names():
-                self._logger.error(f"Provided derivative should be one from available list: {Derivative.to_str()}",
+            if derivative not in DerivativeOrder.get_available_names():
+                self._logger.error(f"Provided derivative should be one from available list: {DerivativeOrder.to_str()}",
                                    f" but was given: {derivative}")
                 raise AttributeError(
-                    f"Provided derivative should be one from available list: {Derivative.to_str()}")
+                    f"Provided derivative should be one from available list: {DerivativeOrder.to_str()}")
             self._logger.info(f"Selected derivative: {derivative}")
-            return getattr(Derivative, derivative)
+            return getattr(DerivativeOrder, derivative)
 
         if isinstance(derivative, int):
-            if derivative > len(Derivative):
+            if derivative > len(DerivativeOrder):
                 self._logger.error(f"Provided derivative type index is out of bounds for existing types. "
-                                   f"It should be one from available list: {list(range(0, len(Derivative)))}"
+                                   f"It should be one from available list: {list(range(0, len(DerivativeOrder)))}"
                                    f" but was given: {derivative}")
                 raise AttributeError(
                     f"Provided derivative type index is out of bounds for existing types. "
-                    f"It should be one from available list: {list(range(1, len(Derivative) + 1))}"
+                    f"It should be one from available list: {list(range(1, len(DerivativeOrder) + 1))}"
                     f" but was given: {derivative}")
             self._logger.info(f"Selected derivative: {derivative}")
-            return Derivative(derivative)
+            return DerivativeOrder(derivative)
         return derivative
 
     def filter_dataset(self, samples: Samples) -> Samples:
@@ -114,18 +114,18 @@ class SavitzkyGolayFilter1D(FilterAbstract):
         :return: Samples object containing N filtered Samples
         :rtype: Samples
         """
-        segmented_samples = []
+        filtered_samples = []
         for sample in tqdm(samples, total=len(samples), desc="Filtering dataset..."):
             try:
-                segmented_samples.append(self.filter_sample(sample))
+                filtered_samples.append(self.filter_sample(sample))
             except Exception as e:
                 self._logger.error(f"Error occurred during dataset filtration: {e}"
                                    f"\nSkipping sample: {sample.guid}.")
                 # keep sample even if it's data is not filtered
                 if self.keep_erroneous_samples:
-                    segmented_samples.append(sample)
+                    filtered_samples.append(sample)
 
-        return Samples(segmented_samples)
+        return Samples(filtered_samples)
 
     def filter_sample(self, sample: Sample) -> Sample:
         """
