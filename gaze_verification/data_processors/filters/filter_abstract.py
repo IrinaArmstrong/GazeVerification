@@ -41,7 +41,7 @@ class FilterAbstract(AlgorithmAbstract, ABC):
         return dataset
 
     @abstractmethod
-    def filter_dataset(self, samples: Samples) -> Samples:
+    def filter_dataset(self, samples: Samples, **kwargs) -> Samples:
         """
         Create a new dataset containing filtered Samples.
 
@@ -54,7 +54,7 @@ class FilterAbstract(AlgorithmAbstract, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def filter_sample(self, sample: Sample) -> Sample:
+    def filter_sample(self, sample: Sample, **kwargs) -> Sample:
         """
         Filter data sequences from Samples according to predefined logic.
 

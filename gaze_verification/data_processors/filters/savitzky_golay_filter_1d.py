@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 from math import factorial
 from typeguard import typechecked
-from typing import List, Union, Optional
+from typing import Any, Union, Optional
 
 from gaze_verification.data_objects.sample import Sample, Samples
 from gaze_verification.data_processors.filters.filter_abstract import FilterAbstract
@@ -45,14 +45,14 @@ class SavitzkyGolayFilter1D(FilterAbstract):
                  window_size: int,
                  order: int,
                  rate: Optional[int] = 1,
-                 deriviate: Optional[Union[str, int, DerivativeOrder]] = DerivativeOrder.NONE,
+                 derivative: Optional[Union[str, int, DerivativeOrder]] = DerivativeOrder.NONE,
                  keep_erroneous_samples: bool = True,
                  verbose: bool = True):
         super().__init__(verbose)
         self.window_size = window_size
         self.order = order
         self.rate = rate
-        self.derivative = self._check_derivative(deriviate)
+        self.derivative = self._check_derivative(derivative)
         self.keep_erroneous_samples = keep_erroneous_samples
         self.check_selected_parameters()
 
@@ -104,7 +104,26 @@ class SavitzkyGolayFilter1D(FilterAbstract):
             return DerivativeOrder(derivative)
         return derivative
 
-    def filter_dataset(self, samples: Samples) -> Samples:
+    def _check_data(self, data: Any) -> np.ndarray:
+        """
+        Check validness of derivative selection.
+        """
+        if not (isinstance(data, np.ndarray) or isinstance(data, list) or isinstance(data, tuple)):
+            self._logger.error(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`, ",
+                               f" provided parameter is of type: {type(data)}")
+            raise AttributeError(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`")
+
+        if isinstance(data, list) or isinstance(data, tuple):
+            try:
+                data = np.asarray(data)
+            except Exception as e:
+                self._logger.error(f"Provided data should an array-like: `list` or `tuple`,"
+                                   " which is convertible to `np.ndarray` type.",
+                                   f" Provided parameter is of type: {type(data)} and raised error:\n{e}")
+                raise AttributeError(f"Provided data should be convertible to `np.ndarray`!\nIt raised error:\n{e}")
+        return data
+
+    def filter_dataset(self, samples: Samples, **kwargs) -> Samples:
         """
         Create a new dataset containing filtered Samples.
 
@@ -127,7 +146,7 @@ class SavitzkyGolayFilter1D(FilterAbstract):
 
         return Samples(filtered_samples)
 
-    def filter_sample(self, sample: Sample) -> Sample:
+    def filter_sample(self, sample: Sample, **kwargs) -> Sample:
         """
         Filter data sequences from Samples according to predefined logic.
 
@@ -137,7 +156,7 @@ class SavitzkyGolayFilter1D(FilterAbstract):
         :return: Sample object with filtered data field,
         :rtype: Sample
         """
-        sample_data = sample.data  # initial of size [data_sample_length, n_dims]
+        sample_data = self._check_data(sample.data)  # initial of size [data_sample_length, n_dims]
         n_dims = sample_data.shape[-1]
 
         filtered_data = []
@@ -150,7 +169,7 @@ class SavitzkyGolayFilter1D(FilterAbstract):
         sample.data = filtered_data
         return sample
 
-    def _filter(self, data: np.ndarray) -> np.ndarray:
+    def _filter(self, data: np.ndarray, **kwargs) -> np.ndarray:
         """
         Filters data with implementation from official Scipy package.
         For further descriptions see: https://scipy-cookbook.readthedocs.io/items/SavitzkyGolay.html

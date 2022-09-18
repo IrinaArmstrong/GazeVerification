@@ -1,9 +1,10 @@
 import scipy
-from scipy import signal
+import itertools
 import numpy as np
 from tqdm import tqdm
+from scipy import signal
 from typeguard import typechecked
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Any, Tuple
 
 from gaze_verification.data_objects.sample import Sample, Samples
 from gaze_verification.data_processors.filters.filter_abstract import FilterAbstract
@@ -46,7 +47,7 @@ class SavitzkyGolayFilter2D(FilterAbstract):
     def __init__(self,
                  window_size: int,
                  order: int,
-                 deriviate_type: Optional[Union[str, int, DerivativeType]] = DerivativeType.NONE,
+                 derivative_type: Optional[Union[str, int, DerivativeType]] = DerivativeType.NONE,
                  keep_erroneous_samples: bool = True,
                  verbose: bool = True):
         super().__init__(verbose)
@@ -54,7 +55,7 @@ class SavitzkyGolayFilter2D(FilterAbstract):
         self.order = order
         # Number of terms in the polynomial expression
         self.n_terms = (self.order + 1) * (self.order + 2) / 2.0
-        self.derivative_type = self._check_derivative_type(deriviate_type)
+        self.derivative_type = self._check_derivative_type(derivative_type)
         self.keep_erroneous_samples = keep_erroneous_samples
         self.check_selected_parameters()
 
@@ -109,12 +110,48 @@ class SavitzkyGolayFilter2D(FilterAbstract):
             return DerivativeType(derivative_type)
         return derivative_type
 
-    def filter_dataset(self, samples: Samples) -> Samples:
+    def _check_data(self, data: Any) -> np.ndarray:
+        """
+        Check validness of derivative selection.
+        """
+        if not (isinstance(data, np.ndarray) or isinstance(data, list) or isinstance(data, tuple)):
+            self._logger.error(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`, ",
+                               f" provided parameter is of type: {type(data)}")
+            raise AttributeError(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`")
+
+        if isinstance(data, list) or isinstance(data, tuple):
+            try:
+                data = np.asarray(data)
+            except Exception as e:
+                self._logger.error(f"Provided data should an array-like: `list` or `tuple`,"
+                                   " which is convertible to `np.ndarray` type.",
+                                   f" Provided parameter is of type: {type(data)} and raised error:\n{e}")
+                raise AttributeError(f"Provided data should be convertible to `np.ndarray`!\nIt raised error:\n{e}")
+
+        n_dims = data.shape[-1]
+        if n_dims % 2 != 0:
+            self._logger.warning(f"Provided data has odd number of dimensions",
+                                 " which is not suitable for 2D Savitsky-Golay filter."
+                                 "Last dimension will be skipped.")
+        return data
+
+    def filter_dataset(self, samples: Samples, dim_subscript: List[Tuple[int, int]] = None, **kwargs) -> Samples:
         """
         Create a new dataset containing filtered Samples.
 
         :param samples: DataClass containing N filtered Samples
         :type samples: Instances
+
+        :param dim_subscript: specifies the subscripts for pairwise aggregation of data dimensions
+                            as a list of tuples of subscript labels.
+                            Each tuple of indexes corresponds to desired pair of dimensions of data.
+                            Example:
+                            [(0, 1), (2, 3)] - groups the first and the second dimensions,
+                                               and thirst with fourth dimensions of array in pairs.
+                            [(0, 1), (0, 3)] - groups the first and the second dimensions,
+                                               and also first with fourth dimensions of array in pairs.
+                                               So indexes can be repeated in different dimensions pairs.
+        :type dim_subscript: str,
 
         :return: Samples object containing N filtered Samples
         :rtype: Samples
@@ -122,7 +159,7 @@ class SavitzkyGolayFilter2D(FilterAbstract):
         filtered_samples = []
         for sample in tqdm(samples, total=len(samples), desc="Filtering dataset..."):
             try:
-                filtered_samples.append(self.filter_sample(sample))
+                filtered_samples.append(self.filter_sample(sample, dim_subscript=dim_subscript))
             except Exception as e:
                 self._logger.error(f"Error occurred during dataset filtration: {e}"
                                    f"\nSkipping sample: {sample.guid}.")
@@ -132,30 +169,65 @@ class SavitzkyGolayFilter2D(FilterAbstract):
 
         return Samples(filtered_samples)
 
-    def filter_sample(self, sample: Sample) -> Sample:
+    def _check_dim_subscript(self, dim_subscript: List[Tuple[int, int]], data_size: Tuple[int, int]):
+        """
+        Checks whether the selected subscript for pairwise aggregation of data dimensions is valid:
+            - Minimum provided dimension index is > 0,
+            - Maximum provided dimension index is less then existing dimensions in data.
+        """
+        dim_subscript_ = list(itertools.chain.from_iterable(dim_subscript))
+        max_dim = max(dim_subscript_)
+        num_less_zero = sum(list(map(lambda x: x < 0, dim_subscript_)))
+
+        if max_dim > data_size[-1]:
+            self._logger.error(f"Maximum provided dimension index ({max_dim}) is larger"
+                               f" then number of existing dimensions in data ({data_size[-1]})")
+            raise AttributeError(f"Maximum provided dimension index ({max_dim}) is larger"
+                                 f" then number of existing dimensions in data ({data_size[-1]})")
+
+        if num_less_zero > 0:
+            self._logger.error(f"Some provided dimensions indexes are less then 0.")
+            raise AttributeError(f"Some provided dimensions indexes are less then 0.")
+
+    def filter_sample(self, sample: Sample, dim_subscript: List[Tuple[int, int]] = None, **kwargs) -> Sample:
         """
         Filter data sequences from Samples according to predefined logic.
-
         :param sample: Sample object containing information about one Sample
         :type sample: Sample
+
+        :param dim_subscript: specifies the subscripts for pairwise aggregation of data dimensions
+                            as a list of tuples of subscript labels.
+                            Each tuple of indexes corresponds to desired pair of dimensions of data.
+                            Example:
+                            [(0, 1), (2, 3)] - groups the first and the second dimensions,
+                                               and thirst with fourth dimensions of array in pairs.
+                            [(0, 1), (0, 3)] - groups the first and the second dimensions,
+                                               and also first with fourth dimensions of array in pairs.
+                                               So indexes can be repeated in different dimensions pairs.
+        :type dim_subscript: str,
 
         :return: Sample object with filtered data field,
         :rtype: Sample
         """
-        sample_data = sample.data  # initial of size [data_sample_length, n_dims]
+        sample_data = self._check_data(sample.data)  # initial of size [data_sample_length, n_dims]
         n_dims = sample_data.shape[-1]
 
+        if dim_subscript is not None:
+            self._check_dim_subscript(dim_subscript, sample_data.shape)
+        else:
+            # init with sequential dimensions pairs
+            dim_subscript = [(i, i + 1) for i in range(sample_data.shape[-1] - 1)]
+
         filtered_data = []
-        for dim in range(n_dims):
-            filtered_data.append(self._filter(sample_data[:, dim]))
-        filtered_data = np.vstack(filtered_data)
-        filtered_data = np.einsum('ij->ji', filtered_data)
+        for dims in dim_subscript:
+            filtered_data.append(self._filter(sample_data[:, dims]))
+        filtered_data = np.hstack(filtered_data)
 
         # set data for sample
         sample.data = filtered_data
         return sample
 
-    def _filter(self, data: np.ndarray) -> np.ndarray:
+    def _filter(self, data: np.ndarray, **kwargs) -> np.ndarray:
         """
         Filters data with implementation from official Scipy package.
         For further descriptions see: https://scipy-cookbook.readthedocs.io/items/SavitzkyGolay.html
@@ -224,19 +296,19 @@ class SavitzkyGolayFilter2D(FilterAbstract):
             np.fliplr(Z[-half_size:, half_size + 1:2 * half_size + 1]) - band)
 
         # Solve system and convolve
-        if self.derivative == DerivativeType.NONE:
+        if self.derivative_type == DerivativeType.NONE:
             m = np.linalg.pinv(A)[0].reshape((self.window_size, -1))
             return signal.fftconvolve(Z, m, mode='valid')
 
-        elif self.derivative == DerivativeType.COLUMN:
-            c = np.linalg.pinv(A)[1].reshape(self.window_size, -1))
+        elif self.derivative_type == DerivativeType.COLUMN:
+            c = np.linalg.pinv(A)[1].reshape(self.window_size, -1)
             return signal.fftconvolve(Z, -c, mode='valid')
 
-        elif self.derivative == DerivativeType.ROW:
+        elif self.derivative_type == DerivativeType.ROW:
             r = np.linalg.pinv(A)[2].reshape((self.window_size, -1))
             return signal.fftconvolve(Z, -r, mode='valid')
 
-        elif self.derivative == DerivativeType.BOTH:
+        elif self.derivative_type == DerivativeType.BOTH:
             c = np.linalg.pinv(A)[1].reshape((self.window_size, -1))
             r = np.linalg.pinv(A)[2].reshape((self.window_size, -1))
             return signal.fftconvolve(

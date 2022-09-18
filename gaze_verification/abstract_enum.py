@@ -1,9 +1,8 @@
 import enum
-from abc import ABC
 
 
 @enum.unique
-class AbstractEnumeration(enum.Enum, ABC):
+class AbstractEnumeration(enum.Enum):
     """
     Provides abstract class for any enumeration.
     """
