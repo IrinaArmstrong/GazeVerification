@@ -162,7 +162,7 @@ class Samples:
         :type path: str
 
         :param as_single_file: whether to save the dataset as a single file "{path}.{engine}",
-            otherwise each instance is saved into "{path}/{i}.{engine}" for i = [0, ..., n_samples)
+            otherwise each sample is saved into "{path}/{i}.{engine}" for i = [0, ..., n_samples)
         :type as_single_file: bool
 
         :param engine: the way of serialization ("json" or "pickle")
