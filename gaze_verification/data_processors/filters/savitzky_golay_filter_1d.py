@@ -128,7 +128,7 @@ class SavitzkyGolayFilter1D(FilterAbstract):
         Create a new dataset containing filtered Samples.
 
         :param samples: DataClass containing N filtered Samples
-        :type samples: Instances
+        :type samples: Samples
 
         :return: Samples object containing N filtered Samples
         :rtype: Samples

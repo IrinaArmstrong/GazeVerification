@@ -140,7 +140,7 @@ class SavitzkyGolayFilter2D(FilterAbstract):
         Create a new dataset containing filtered Samples.
 
         :param samples: DataClass containing N filtered Samples
-        :type samples: Instances
+        :type samples: Samples
 
         :param dim_subscript: specifies the subscripts for pairwise aggregation of data dimensions
                             as a list of tuples of subscript labels.

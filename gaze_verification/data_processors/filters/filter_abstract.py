@@ -29,7 +29,7 @@ class FilterAbstract(AlgorithmAbstract, ABC):
 
     def run(self, data: Samples, **kwargs) -> Samples:
         """
-        Process Instances to create new segmented ones.
+        Process Samples to create new segmented ones.
 
         :param data: Samples containing N filtered Samples
         :type data: Samples
@@ -46,7 +46,7 @@ class FilterAbstract(AlgorithmAbstract, ABC):
         Create a new dataset containing filtered Samples.
 
         :param samples: DataClass containing N filtered Samples
-        :type samples: Instances
+        :type samples: Samples
 
         :return: Samples object containing N filtered Samples
         :rtype: Samples
