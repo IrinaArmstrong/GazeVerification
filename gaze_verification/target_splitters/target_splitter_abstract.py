@@ -34,8 +34,26 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         Extracts targets from the samples
         :param data: Samples
         """
-        targets = [sample.user_id for sample in data]
+        targets = [sample.label for sample in data]
         return targets
+
+    @staticmethod
+    def targets_split_check(targets: List[TargetLabelType],
+                            targets_split: Dict[str, List[TargetLabelType]]):
+        """
+        Check data types consistency of targets splits and targets.
+                """
+        if not (isinstance(targets, np.ndarray) or isinstance(targets, list) or isinstance(targets, tuple)):
+            raise AttributeError(f"Provided targets should a type of `np.ndarray`, or array-like: `list` or `tuple`, ",
+                                 f" provided parameter is of type: {type(targets)}")
+        # Data types check
+        targets_dtype = type(targets[0])
+        for split_name, split_targets in targets_split.items():
+            if not isinstance(split_targets[0], targets_dtype):
+                raise Exception(
+                    f"Target split `{split_name}` has targets of type: {type(split_targets[0])}, "
+                    f"which is not comparable with targets data type: {targets_dtype}"
+                )
 
     @staticmethod
     def _split_samples(data: Samples,
@@ -45,10 +63,13 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         """
         Split and (optionally) shuffle samples based on defined targets split
         """
+        TargetSplitterAbstract.targets_split_check(targets, targets_split)
         result = dict()
         for split_name, split_targets in targets_split.items():
             mask = list(map(lambda x: x in split_targets, targets))
-            result[split_name] = Samples(list(compress(data, mask)))
+            masked_targets = list(compress(data, mask))
+            if len(masked_targets):
+                result[split_name] = Samples(list(compress(data, mask)))
         return result
 
     def _log_split_result(self, result: Dict[str, Samples]):

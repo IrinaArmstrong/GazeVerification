@@ -6,7 +6,7 @@ from gaze_verification.data_objects.sample import Sample, Samples
 
 
 @typechecked
-class TrainDataset(Dataset):
+class SamplesDataset(Dataset):
     """
     Dataset with a flexible function for vectorized data preparation for few-shot learning tasks.
 
@@ -30,7 +30,7 @@ class TrainDataset(Dataset):
             is_predict: bool = False,
             prepare_sample_fn_kwargs: Dict[str, Any] = {}
     ):
-        super(TrainDataset, self).__init__()
+        super(SamplesDataset, self).__init__()
         self.prepare_sample_fn = prepare_sample_fn
         if not len(samples):
             raise ValueError(

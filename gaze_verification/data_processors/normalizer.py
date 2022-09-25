@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from typeguard import typechecked
-from typing import List, Union, Optional, Any, Tuple
+from typing import Union, Optional, Any
 
 from gaze_verification.data_objects.sample import Sample, Samples
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
