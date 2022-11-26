@@ -113,6 +113,18 @@ class Sample:
             return None
         return cls(**saved_params)
 
+    def update(self, new_attr: Dict[str, Any]):
+        """
+        Inplace updates attribute in current class instance.
+        If attribute do not exists, do nothing.
+        :param new_attr: dict, where key - is an attribute name, value - new value to be set;
+        :type new_attr: dict, key - str, value - any type;
+        """
+        for key, value in new_attr.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+                logger.debug(f"Attribute {key} is updated.")
+
 
 @dataclass_json
 @dataclass
