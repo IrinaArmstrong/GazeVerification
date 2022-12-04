@@ -34,6 +34,7 @@ class NonOverlappingSegmentor(SegmentorAbstract):
         self.segment_length = segment_length
         self.min_completness_ratio = min_completness_ratio
         self.fill_value = fill_value
+        self._hyperparameters = self.register_hyperparameters()
 
     def build_segmented_dataset(self, samples: Samples) -> Samples:
         """

@@ -58,6 +58,7 @@ class SavitzkyGolayFilter2D(FilterAbstract):
         self.derivative_type = self._check_derivative_type(derivative_type)
         self.keep_erroneous_samples = keep_erroneous_samples
         self.check_selected_parameters()
+        self._hyperparameters = self.register_hyperparameters()
 
     def check_selected_parameters(self):
         """

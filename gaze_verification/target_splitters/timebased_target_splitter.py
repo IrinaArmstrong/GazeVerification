@@ -58,6 +58,7 @@ class TimebasedTargetSplitter(TargetSplitterAbstract):
         self.seed = seed
         self.min_targets_per_split = min_targets_per_split
         self.min_period_between_splits = min_period_between_splits
+        self._hyperparameters = self.register_hyperparameters()
 
 
     def run(self, data: Samples, **kwargs) -> Dict[str, dict]:

@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from typeguard import typechecked
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, Dict
 
 from gaze_verification.data_objects.sample import Sample, Samples
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
@@ -52,6 +52,7 @@ class ZScoreNormalizer(AlgorithmAbstract):
         self._copy = copy
         self.mean = mean
         self.std = std
+        self._hyperparameters = self.register_hyperparameters()
 
     def _check_data(self, data: Any) -> np.ndarray:
         """
@@ -189,3 +190,5 @@ class ZScoreNormalizer(AlgorithmAbstract):
                                       axis=axis,
                                       inner_dtype=inner_dtype,
                                       output_dtype=output_dtype)
+
+

@@ -45,6 +45,7 @@ class ProportionsTargetSplitter(TargetSplitterAbstract):
         self.is_random = is_random
         self.min_targets_per_split = min_targets_per_split
         self.seed = seed
+        self._hyperparameters = self.register_hyperparameters()
 
     @staticmethod
     def _prepare_splits(splits_proportions: List[Tuple[str, Union[float, int]]]) -> List[Tuple[str, float]]:
