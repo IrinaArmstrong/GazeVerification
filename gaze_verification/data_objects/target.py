@@ -1,4 +1,3 @@
-import dataclasses
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from abc import ABC, abstractmethod

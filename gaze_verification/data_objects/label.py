@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import Optional, List, Tuple, Dict
+from typing import Optional, List, Dict
 from abc import ABC, abstractmethod
-from gaze_verification.data_objects.target import Target, ClassificationTarget
+from gaze_verification.data_objects.target import Target
 
 
 @dataclass_json

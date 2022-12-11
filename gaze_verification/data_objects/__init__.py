@@ -6,5 +6,7 @@ __all__ = [
     "Sample",
     "Samples",
     "Label",
-    "Target"
+    "ClassificationLabel",
+    "Target",
+    "ClassificationTarget"
 ]
