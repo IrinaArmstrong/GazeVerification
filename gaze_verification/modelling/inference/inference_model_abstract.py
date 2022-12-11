@@ -2,34 +2,38 @@ import os
 import torch
 from abc import abstractmethod
 from torch.utils.data import DataLoader
-from auto_ner import Instances, Instance
-from auto_ner.core.utils import init_logger
 from typing import Dict, Any, List, Optional, Union
-from gaze_verification.data_processors.datasets import SamplesDataset
 
+from gaze_verification.logging_handler import get_logger
+from gaze_verification.data_objects.sample import Sample, Samples
+from gaze_verification.data_processors.datasets import SamplesDataset
 
 class InferenceModelAbstract(torch.nn.Module):
     """
     Abstract class for all inference-ready models.
-    which can run in predict-mode.
+    which can run in predict-mode to get predictions
+    in Formatter-defined format.
     """
-    def __init__(self):
+    def __init__(self, embedder, body, targeter):
         super().__init__()
-        self._logger = init_logger(logger_name=self.__class__.__name__)
+        self._logger = get_logger(
+            name=self.__class__.__name__,
+            logging_level="INFO"
+        )
 
-    def custom_dataloader(
+    def get_dataloader(
             self,
-            instances: Instances,
+            samples: Samples,
             *args,
             is_predict: bool = False,
             cache_samples: bool = False,
             **kwargs
     ) -> DataLoader:
         """
-        Method prepares a dataloader using InstanceDataset.
+        Method prepares a dataloader using custom SamplesDataset.
 
-        :param instances: data samples.
-        :type instances: Instances
+        :param samples: data samples;
+        :type samples: Samples;
 
         :param is_predict: whether model is running in predict mode, defaults to False
         :type is_predict: bool
@@ -41,9 +45,9 @@ class InferenceModelAbstract(torch.nn.Module):
         :rtype: DataLoader
         """
         return DataLoader(
-            InstanceDataset(
+            SamplesDataset(
                 self.prepare_sample_fn,
-                instances,
+                samples,
                 is_predict=is_predict,
                 cache_samples=cache_samples
             ),
@@ -56,35 +60,47 @@ class InferenceModelAbstract(torch.nn.Module):
         return self
 
     @abstractmethod
-    def prepare_sample_fn(self, instance: Instance, is_predict: bool) -> Dict[str, Any]:
+    def prepare_sample_fn(self, sample: Sample, is_predict: bool) -> Dict[str, Any]:
         """
-        Describe logic for preparing a sample from an Instance for your model
+        Contains a pipeline of transformations for preparing data from a raw Sample for model.
+        The function can include various transformations,
+        for example: filtering, splitting into smaller parts of data, and so on.
         """
         raise NotImplementedError
 
     @abstractmethod
     def collate_fn(self, data: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
         """
-        Describe logic for collecting samples a one batch inside DataLoader
+        Describes a logic for collecting samples into a single batch inside DataLoader.
         """
         raise NotImplementedError
 
     @abstractmethod
     def predict(
             self,
-            data: Instances,
-            dataloader_kwargs: Union[dict, DictConfig],
+            data: Samples,
+            dataloader_kwargs: Dict[str,Any],
             device: Union[str, torch.device]
-    ) -> Instances:
+    ) -> Samples:
+        """
+        Runs prediction pipeline and returns Samples
+        with filled predictions related fields filled.
+        :param data: data samples;
+        :type data: Samples;
+        :param dataloader_kwargs: some arguments for Pytorch Dataloader;
+        :type dataloader_kwargs: dict;
+        :param device: a device for samples storage;
+        :type device: str, torch.device;
+        :return: samples with filled predictions related fields filled;
+        :rtype: Samples.
+        """
         raise NotImplementedError
 
-    def save_checkpoint(self, path: str, filename: str = "model.ckpt") -> None:
+    def save_weights(self, path: str, filename: str = "model.ckpt") -> None:
         """
         Save the model's state_dict into the path folder.
-
         :param path: path to save a model to.
         :type path: str
-
         :param filename: name of the file, defaults to "model.ckpt"
         :type filename: str
         """
@@ -93,20 +109,22 @@ class InferenceModelAbstract(torch.nn.Module):
         self._logger.info(f"The checkpoint will be save to {joint_path}.")
         torch.save(self.state_dict(), joint_path)
 
-    def load_checkpoint(self, path: str, filename: Optional[str] = "model.ckpt") -> None:
+    def load_weights(self, path: str,
+                     filename: Optional[str] = "model.ckpt",
+                     location: str = 'cpu') -> None:
         """
         Load the model's state_dict from the path folder.
-
-        :param path: path to load a model from (folder or file).
-        :type path: str
-
+        :param path: path to load a model from (folder or file);
+        :type path: str;
         :param filename: name of the file (ignored when 'path' is a path to the file),
             defaults to "model.ckpt"
-        :type filename: Optional[str]
+        :type filename: Optional[str];
+        :param location: a device name to store loaded model;
+        :type location: str.
         """
         if os.path.isfile(path):
             joint_path = path
         else:
             joint_path = os.path.join(path, filename)
-        self._logger.info(f"The checkpoint will be loaded from {joint_path}.")
-        self.load_state_dict(torch.load(joint_path, map_location=torch.device("cpu")))
+        self._logger.info(f"The weights will be loaded from {joint_path} to '{location}'.")
+        self.load_state_dict(torch.load(joint_path, map_location=torch.device(location)))

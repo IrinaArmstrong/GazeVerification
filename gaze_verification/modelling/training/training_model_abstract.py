@@ -68,4 +68,3 @@ class TrainingModelAbstract(LightningModule):
         """
         raise NotImplementedError
 
-

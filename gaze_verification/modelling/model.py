@@ -1,16 +1,18 @@
 from typing import List
 from typeguard import typechecked
+from gaze_verification.modelling.training.training_model_abstract import TrainingModelAbstract
+from gaze_verification.modelling.inference.inference_model_abstract import InferenceModelAbstract
+
 from auto_ner.bodies.body_abstract import BodyConfigAbstract
 from auto_ner.core.instance import Instances
 from auto_ner.core.markups import MarkupAbstract
 from auto_ner.embedders.embedder_abstract import EmbedderConfigAbstract
 from auto_ner.model.training_model_abstract import TrainingModelAbstract
 from auto_ner.targeters.targeter_abstract import TargeterAbstractConfig
-from auto_ner.model.inference_model import InferenceModel
 
 
 @typechecked
-class Model(InferenceModel, TrainingModelAbstract):
+class Model(InferenceModelAbstract, TrainingModelAbstract):
     """
     Common class for most part of models. It is inherited from LightningModule
     from pytorch_lightning (via TrainingModelAbstract). Last one is used as a common
@@ -86,8 +88,8 @@ class Model(InferenceModel, TrainingModelAbstract):
         logs = {"val_loss": val_loss}
 
         predictions = self.targeter.convert_batch_outputs_to_predictions(
-            label_preds=label_preds,
-            label_probas=label_probas,
+            predictions=label_preds,
+            probas=label_probas,
             attr_ohe_logits=attr_ohe_logits,
             attr_mhe_logits=attr_mhe_logits,
             **val_batch
