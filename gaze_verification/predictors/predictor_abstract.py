@@ -1,10 +1,10 @@
 import torch
 from abc import abstractmethod, ABC
 from typeguard import typechecked
-from typing import Dict, List
+from typing import Dict, List, Type
 
 from gaze_verification.logging_handler import get_logger
-from gaze_verification.data_objects import (Sample, Samples, Label)
+from gaze_verification.data_objects import (Sample, Samples, Label, Target)
 from gaze_verification.target_configurators.target_configurator import TargetConfigurator
 
 
@@ -17,22 +17,24 @@ class PredictorAbstract(torch.nn.Module, ABC):
 
     POOLERS = ("first", "max", "relu-max", "sum", "avg")
 
-    def __init__(self, targets_config_path: str, hidden_size: int,
-                 confidence_level: float = 0.5,
-                 class_weights: Dict[int, float] = None,
-                 p_dropout: float = 0.6):
+    def __init__(self, targets_config_path: str):
         super().__init__()
         self._logger = get_logger(
             name=self.__class__.__name__,
             logging_level="INFO"
         )
-        self.p_dropout = p_dropout
-        self.confidence_level = confidence_level
-        self.hidden_size = hidden_size
-        self.class_weights = class_weights
-
         self.configurator = TargetConfigurator(targets_config_path)
         self.head = None  # must be defined for each child
+
+    @property
+    @abstractmethod
+    def label_class(self) -> Type[Label]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def target_class(self) -> Type[Target]:
+        raise NotImplementedError
 
     @abstractmethod
     def create_targets(self, samples: Sample, is_predict: bool = False) -> Samples:
@@ -44,24 +46,6 @@ class PredictorAbstract(torch.nn.Module, ABC):
         :type is_predict: bool, defaults to False;
         :return: data samples with targets labels converted to indexes;
         :rtype: Dict[str, Any]
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def convert_batch_outputs_to_predictions(
-            self,
-            predictions: torch.Tensor,
-            probas: torch.Tensor,
-            *args, **kwargs
-    ) -> List[Label]:
-        """
-        Convert batch tensors into predictions.
-        :param predictions: label predictions;
-        :type predictions: torch.Tensor;
-        :param probas: label probabilities;
-        :type probas: torch.Tensor;
-        :return: predictions for the batch;
-        :rtype: List[Label].
         """
         raise NotImplementedError
 
@@ -101,6 +85,24 @@ class PredictorAbstract(torch.nn.Module, ABC):
         Convert sample outputs into predictions.
         :return: predicted label for the sample.
         :rtype: Label object.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def convert_batch_outputs_to_predictions(
+            self,
+            predictions: torch.Tensor,
+            probas: torch.Tensor,
+            *args, **kwargs
+    ) -> List[Label]:
+        """
+        Convert batch tensors into predictions.
+        :param predictions: label predictions;
+        :type predictions: torch.Tensor;
+        :param probas: label probabilities;
+        :type probas: torch.Tensor;
+        :return: predictions for the batch;
+        :rtype: List[Label].
         """
         raise NotImplementedError
 
