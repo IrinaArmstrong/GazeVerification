@@ -31,7 +31,7 @@ class HeadAbstract(nn.Module, ABC):
             self,
             label_logits: torch.Tensor,
             *args, **kwargs
-    ) -> Union[torch.Tensor, Any]:
+    ) -> Tuple[torch.Tensor, ...]:
         """
         Retrieves prediction labels from logits.
         :param label_logits: logits vector/tensor from model outputs;

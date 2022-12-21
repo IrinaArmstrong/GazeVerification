@@ -8,18 +8,22 @@ from gaze_verification.logging_handler import get_logger
 from gaze_verification.data_objects.sample import Sample, Samples
 from gaze_verification.data_processors.datasets import SamplesDataset
 
+
 class InferenceModelAbstract(torch.nn.Module):
     """
     Abstract class for all inference-ready models.
     which can run in predict-mode to get predictions
     in Formatter-defined format.
     """
-    def __init__(self, embedder, body, targeter):
+    def __init__(self, embedder, body, predictor):
         super().__init__()
         self._logger = get_logger(
             name=self.__class__.__name__,
             logging_level="INFO"
         )
+        self.embedder = embedder
+        self.body = body
+        self.predictor = predictor
 
     def get_dataloader(
             self,
@@ -57,7 +61,7 @@ class InferenceModelAbstract(torch.nn.Module):
         )
 
     def get_embedder(self):
-        return self
+        return self.embedder
 
     @abstractmethod
     def prepare_sample_fn(self, sample: Sample, is_predict: bool) -> Dict[str, Any]:
