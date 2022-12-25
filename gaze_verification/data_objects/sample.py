@@ -2,12 +2,15 @@
 import os
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 # DTO
 import dataclasses
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
+
+from gaze_verification.data_objects.target import Target
+from gaze_verification.data_objects.label import Label
 
 # Serialization
 import json
@@ -34,7 +37,7 @@ class Sample:
     """
     guid: int
     seq_id: int
-    label: int
+    label: Union[int, Target]
     session_id: int
     user_id: int = None
     data: np.ndarray = None
@@ -43,6 +46,8 @@ class Sample:
     stimulus_type: str = None
     skip_sample: bool = False
     additional_attributes: Dict[str, Any] = None
+    # compliting after creation
+    predicted_label: Union[int, Label] = None
 
     @property
     def length(self):
@@ -97,6 +102,7 @@ class Sample:
             if (isinstance(field, np.ndarray)
                 or isinstance(field, pd.DataFrame) or (field is None))
         ]
+
         _ = [repr.pop(field_name) for field_name in ignore_fields]
         return str(repr)
 
