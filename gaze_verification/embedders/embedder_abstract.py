@@ -12,10 +12,7 @@ from gaze_verification.logging_handler import get_logger
 @typechecked
 class EmbedderAbstract(torch.nn.Module, ABC):
     """
-    Abstract class for making embeddings out of tokenized texts.
-
-    The method create_inputs vectorizes the data for one sample,
-    and collate_fn forms tensors inside a batch.
+    Abstract class for making embeddings out of data.
     """
     def __init__(self, config: "EmbedderConfigAbstract", *args, **kwargs):
         super().__init__()
@@ -36,10 +33,6 @@ class EmbedderAbstract(torch.nn.Module, ABC):
             return self.__class__.__name__
         else:
             return self.name
-
-    @abstractmethod
-    def get_hidden_size(self) -> int:
-        raise NotImplementedError
 
     @abstractmethod
     def get_embeddings_size(self) -> int:

@@ -31,7 +31,7 @@ class CBAM(nn.Module):
 
     def __init__(self, gate_channels: int,
                  reduction_ratio: int,
-                 pool_types: Optional[Tuple[str, ...]],
+                 pool_types: Optional[Tuple[str, ...]] = ('avg', 'max'),
                  no_spatial: bool = False):
         super(CBAM, self).__init__()
         self.ChannelGate = ChannelGate(gate_channels,
