@@ -31,29 +31,27 @@ class InferenceModelAbstract(torch.nn.Module):
             *args,
             is_predict: bool = False,
             cache_samples: bool = False,
+            prepare_samples_fn_kwargs: Dict[str, Any],
+            prepare_sample_fn_kwargs: Dict[str, Any],
             **kwargs
     ) -> DataLoader:
         """
         Method prepares a dataloader using custom SamplesDataset.
-
         :param samples: data samples;
         :type samples: Samples;
-
-        :param is_predict: whether model is running in predict mode, defaults to False
-        :type is_predict: bool
-
-        :param cache_samples: whether to cache the results of prepare_sample_fn, defaults to False
-        :type cache_samples: bool
-
-        :return: a dataloader.
-        :rtype: DataLoader
+        :param is_predict: whether model is running in predict mode, defaults to False;
+        :type is_predict: bool;
+        :return: a dataloader instance;
+        :rtype: torch.DataLoader.
         """
         return DataLoader(
             SamplesDataset(
-                self.prepare_sample_fn,
                 samples,
-                is_predict=is_predict,
-                cache_samples=cache_samples
+                prepare_samples_fn=self.prepare_samples_fn,
+                prepare_samples_fn_kwargs=prepare_samples_fn_kwargs,
+                prepare_sample_fn=self.prepare_sample_fn,
+                prepare_sample_fn_kwargs=prepare_sample_fn_kwargs,
+                is_predict=is_predict
             ),
             *args,
             collate_fn=self.collate_fn,
@@ -67,6 +65,15 @@ class InferenceModelAbstract(torch.nn.Module):
     def prepare_sample_fn(self, sample: Sample, is_predict: bool) -> Dict[str, Any]:
         """
         Contains a pipeline of transformations for preparing data from a raw Sample for model.
+        The function can include various transformations,
+        for example: filtering, splitting into smaller parts of data, and so on.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def prepare_samples_fn(self, samples: Samples, is_predict: bool) -> Dict[str, Any]:
+        """
+        Contains a pipeline of transformations for preparing data from a raw Samples sequence for model.
         The function can include various transformations,
         for example: filtering, splitting into smaller parts of data, and so on.
         """

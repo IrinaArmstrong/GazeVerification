@@ -1,7 +1,7 @@
 import torch
 
 from typeguard import typechecked
-from typing import (List, Tuple, Dict, Any)
+from typing import (List, Tuple, Dict, Any, Union)
 
 from gaze_verification.data_objects import (Samples, Sample, Label, Target)
 from gaze_verification.modelling.training.training_model_abstract import TrainingModelAbstract
@@ -11,10 +11,10 @@ from gaze_verification.modelling.inference.inference_model_abstract import Infer
 from gaze_verification.predictors import PredictorAbstract
 
 # Body --> todo!
-# from gaze_verification.bodies.body_abstract import BodyAbstract
+from gaze_verification.bodies.body_abstract import BodyAbstract
 
 # Embedder
-# from gaze_verification.embedders.embedder_abstract import EmbedderAbstract
+from gaze_verification.embedders.embedder_abstract import EmbedderAbstract
 
 
 @typechecked
@@ -70,7 +70,6 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         label_logits = self.predictor.get_logits(
             body_output, **kwargs
         )
-
         return label_logits
 
     def forward(self, *args, **kwargs) -> Tuple[torch.Tensor, ...]:
@@ -88,7 +87,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         )
 
     def training_step(self, train_batch, batch_idx):
-        # run embedder + body
+        # run embedder + body + predictor
         (
             label_preds,
             label_scores,
@@ -107,8 +106,8 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         self.log("train_loss", train_loss)
         return {"loss": train_loss, "log": logs}
 
-    def validation_step(self, val_batch, batch_idx):
-        # run embedder + body
+    def validation_step(self, val_batch: Any, batch_idx: int):
+        # run embedder + body + predictor
         (
             label_preds,
             label_scores,
@@ -135,15 +134,43 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
             "predictions": predictions
         }
 
-
-    def collate_fn(batch: List[Sample]):
+    def collate_fn(self, batch: List[Sample]):
         """
         Function that takes in a batch of data Samples and puts the elements within the batch
         into a tensors with an additional outer dimension - batch size.
         The exact output type of each batch element will be a `torch.Tensor`.
         """
+        # todo: write it here or cretae as passed function
         pass
 
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:
+        """
+        Step function called during pytorch_lightning.trainer.trainer.Trainer.predict().
+        By default, it calls forward`.
+
+        :param batch: a Current batch;
+        :type batch: Any;
+        :param batch_idx: an index of current batch;
+        :type batch_idx: int;
+        :param dataloader_idx: an index of the current dataloader;
+        :type dataloader_idx: int;
+        :return: predicted output;
+        :rtype: Any.
+        """
+        # run embedder + body + predictor
+        (
+            label_preds,
+            label_scores,
+            label_logits,
+            label_probas
+        ) = self.forward(**batch)
+
+        return (
+            label_preds,
+            label_scores,
+            label_logits,
+            label_probas
+        )
 
     def predict_batch(self, batch: dict):
         with torch.no_grad():
@@ -151,28 +178,42 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
                 label_preds,
                 label_scores,
                 label_logits,
-                label_probas,
-                attr_ohe_logits,
-                attr_mhe_logits
+                label_probas
             ) = self.forward(**batch)
 
-        predictions = self.targeter.convert_batch_outputs_to_predictions(
+        predictions = self.predictor.convert_batch_outputs_to_predictions(
             label_preds=label_preds,
             label_probas=label_probas,
-            attr_ohe_logits=attr_ohe_logits,
-            attr_mhe_logits=attr_mhe_logits,
             **batch
         )
         return predictions
 
     def predict(
             self,
-            data: Instances,
-            dataloader_kwargs: Union[dict, DictConfig],
+            data: Samples,
+            dataloader_kwargs: Dict[str, Any],
             device: Union[str, torch.device]
-    ) -> Instances:
-        predict_dataloader = self.custom_dataloader(data, **dataloader_kwargs, is_predict=True)
+    ) -> Samples:
+        """
+        Custom predict for model.
+        :param data: a sequence of samples with data (may not contain labels);
+        :type data: Samples;
+        :param dataloader_kwargs: parameters to be passed to prediction dataloader.
+                Contains:
+                    - prepare_sample_fn,
+                    - prepare_sample_fn_kwargs,
+                    - prepare_samples_fn,
+                    - prepare_samples_fn_kwargs.
+        :type dataloader_kwargs: dict;
+        :param device: device for inference;
+        :type device: Union[str, torch.device];
+        :return: samples with predictions filled;
+        :rtype: Samples.
+        """
+        predict_dataloader = self.get_dataloader(data, **dataloader_kwargs, is_predict=True)
         self.eval()
+
+        # run inference
         output = []
         with torch.no_grad():
             for batch in predict_dataloader:
@@ -180,19 +221,17 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
                     {k: v.to(device) for k, v in batch.items()}
                 )
                 output.extend(batch_preds)
+
         for i in range(len(data)):
             preds = output[i]
-            if isinstance(preds, NERMarkup):
-                data[i].predicted_ner_markup = preds
-            elif isinstance(preds, ClassificationMarkup):
-                data[i].predicted_clf_markup = preds
-            elif isinstance(preds, DocNERMarkup):
-                data[i].predicted_docner_markup = preds
+            if isinstance(preds, Target):
+                data[i].predicted_label = preds
+            elif isinstance(preds, list):
+                # todo: may be add post-processing
+                data[i].predicted_label = preds
             else:
-                # Эта ошибка не может появиться в стабильных версиях кода.
-                # Проверка оставлена на случай добавления новых типов разметки.
-                raise ValueError(f"Unknown markup type: {type(preds)}")
-            data[i].fill_entities_text()
+                raise ValueError(f"Unknown target type: {type(preds)}")
+
         return data
 
     def save_valid_predictions_to_samples(
@@ -203,5 +242,3 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         return self.predictor.save_valid_predictions_to_instances(
             samples, predictions
         )
-
-

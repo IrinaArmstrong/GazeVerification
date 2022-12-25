@@ -20,6 +20,7 @@ class SamplesDataset(Dataset):
             prepare_samples_fn_kwargs: Dict[str, Any] = {},
             prepare_sample_fn: Callable = None,
             prepare_sample_fn_kwargs: Dict[str, Any] = {},
+            is_predict: bool = False,
     ):
         """
         :param samples: samples of dataset,
@@ -36,6 +37,9 @@ class SamplesDataset(Dataset):
 
         :param prepare_sample_fn_kwargs: parameters for single sample data function preparation;
         :type prepare_sample_fn_kwargs: dict with key - parameter name, value - parameter value;
+
+        :param is_predict: whether model is running in predict mode, defaults to False;
+        :type is_predict: bool.
         """
         super(SamplesDataset, self).__init__()
         self._logger = get_logger(
@@ -48,6 +52,7 @@ class SamplesDataset(Dataset):
                 "Please, check if input samples list is empty."
             )
         self.samples = samples
+        self.is_predict = is_predict
         # For full dataset
         self._prepare_samples_fn = prepare_samples_fn
         self._prepare_samples_fn_kwargs = prepare_samples_fn_kwargs
