@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 from abc import ABC, abstractmethod
 from gaze_verification.data_objects.target import Target
 
@@ -65,7 +65,7 @@ class ClassificationLabel(Label):
     :type probabilities: Optional[Dict[str, float]], defaults to None;
     """
     labels: List[Target]
-    probabilities: Optional[Dict[str, float]] = None
+    probabilities: Optional[Dict[Union[str, int], float]] = None
 
     def __iter__(self):
         return iter(self.labels)
@@ -97,3 +97,25 @@ class ClassificationLabel(Label):
                 labels.append(label)
 
         return ClassificationLabel(labels, probabilities)
+
+    def __repr__(self):
+        """
+        Returns string representation of Label object.
+        :rtype: str.
+        """
+        s = f"Label:"
+        with_probabilities = False
+        if self.probabilities is not None:
+            with_probabilities = True
+        for i in range(len(self.labels)):
+            label = self.labels[i]
+            s += f" {label}"
+            if with_probabilities:
+                prob = self.probabilities.get(label.name)
+                if prob is None:
+                    prob = self.probabilities.get(label.id)
+                if prob is None:
+                    prob = "<not_found>"
+                s += f" ({prob})"
+            s += ", "
+        return s

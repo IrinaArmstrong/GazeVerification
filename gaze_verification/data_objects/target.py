@@ -52,7 +52,17 @@ class ClassificationTarget(Target):
 
     @property
     def data(self) -> Tuple[str, Optional[int], Optional[List[str]]]:
-        return self.type, self.id, self.attributes
+        return self.name, self.id, self.attributes
+
+    def __repr__(self):
+        """
+        Returns string representation of Target object.
+        :rtype: str.
+        """
+        s = f"Target name: `{self.name}`, id: `{self.id}`"
+        if self.attributes is not None:
+            s += f" attributes: `{self.attributes}`"
+        return s
 
     def __getitem__(self, item):
         return self.name

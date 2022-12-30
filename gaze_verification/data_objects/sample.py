@@ -2,7 +2,7 @@
 import os
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 
 # DTO
 import dataclasses
@@ -37,17 +37,17 @@ class Sample:
     """
     guid: int
     seq_id: int
-    label: Union[int, Target]
     session_id: int
-    user_id: int = None
-    data: np.ndarray = None
-    data_type: str = None
-    dataset_type: str = None
-    stimulus_type: str = None
-    skip_sample: bool = False
-    additional_attributes: Dict[str, Any] = None
+    label: Optional[Union[int, Target]] = None
+    user_id: Optional[int] = None
+    data: Optional[Union[np.ndarray, List[float]]] = None
+    data_type: Optional[str] = None
+    dataset_type: Optional[str] = None
+    stimulus_type: Optional[str] = None
+    skip_sample: Optional[bool] = False
+    additional_attributes: Optional[Dict[str, Any]] = None
     # compliting after creation
-    predicted_label: Union[int, Label] = None
+    predicted_label: Optional[Union[int, Label]] = None
 
     @property
     def length(self):
@@ -61,7 +61,8 @@ class Sample:
         Returns a representation of the object.
         """
         s = f"Sample guid={self.guid}"
-        s += f" label={self.label}"
+        if self.label is not None:
+            s += f" label={self.label}"
         if self.user_id is not None:
             s += f" user_id={self.user_id}"
         if self.session_id is not None:
@@ -72,6 +73,8 @@ class Sample:
             s += f" data_type={self.data_type}"
         if self.dataset_type is not None:
             s += f" dataset_type={self.dataset_type}"
+        if self.predicted_label is not None:
+            s += f" predicted_label={self.predicted_label}"
         return s
 
     def __add__(self, other: 'Sample') -> 'Sample':
@@ -238,6 +241,7 @@ class Samples:
             'separators': None, 'sort_keys': False
         }
         """
+        logger.warning(f"Only Samples without `data` or with `data` of type `int` can be saved to json!")
         return self.save(path,
                          as_single_file,
                          engine="json",
@@ -343,7 +347,3 @@ class Samples:
         }
         """
         return cls.load(path, engine="pickle", n_samples=n_samples)
-
-
-if __name__ == "__main__":
-    logger.info(f"Starting data processing...")

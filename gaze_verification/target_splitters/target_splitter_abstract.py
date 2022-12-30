@@ -7,6 +7,7 @@ from typing import List, Dict, Union, TypeVar
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
 from gaze_verification.data_objects.sample import Sample, Samples
+from gaze_verification.data_objects.target import Target
 
 # Assumes that targets labels can be anything: str, int, etc.
 TargetLabelType = TypeVar("TargetLabelType")
@@ -34,7 +35,10 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         Extracts targets from the samples
         :param data: Samples
         """
-        targets = [sample.label for sample in data]
+        if isinstance(data[0].label, Target):
+            targets = [sample.label.id for sample in data]
+        else:
+            targets = [sample.label for sample in data]
         return targets
 
     @staticmethod
