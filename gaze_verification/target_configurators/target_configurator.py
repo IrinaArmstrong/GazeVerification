@@ -1,9 +1,10 @@
 import json
 import numpy as np
 from typeguard import typechecked
-from typing import List, Any, Dict, Union, Set, Tuple
+from typing import List, Any, Dict, Union, Set, Tuple, Type
 
 from gaze_verification.data_objects.sample import Samples
+from gaze_verification.data_objects.target import Target, ClassificationTarget
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.target_splitters.target_splitter_abstract import TargetSplitterAbstract
 
@@ -265,3 +266,31 @@ class TargetConfigurator:
                                                               targets=targets,
                                                               targets_split=self.datatype2names)
         return samples_split
+
+    def construct_target(self, target: Union[str, int], target_cls: Type) -> Target:
+        """
+        Construct Target class instance from `id` or `name` of the target.
+        :param target: `id` or `name` of the target;
+        :type target: int or str;
+        :param target_cls: class for Target creation;
+        :type target_cls: type;
+        :return: Target class instance;
+        :rtype: Target.
+        """
+        target_class = None
+
+        # If we requested type/subtype of ClassificationTarget
+        if isinstance(target_cls, ClassificationTarget):
+            if isinstance(target, int):
+                target_class = target_cls(id=target,
+                                          name=self.idx2target(target))
+            elif isinstance(target, str):
+                target_class = target_cls(name=target,
+                                          id=self.target2idx(target))
+            else:
+                raise AttributeError(f"Target identifier type is unknown: {type(target)},"
+                                     "choose one from [`int`, `str`] and try again.")
+        else:
+            raise NotImplementedError(f"Currently regression type targets are unavailable.")
+
+        return target_class

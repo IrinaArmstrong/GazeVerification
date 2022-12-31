@@ -44,6 +44,8 @@ class Sample:
     data_type: Optional[str] = None
     dataset_type: Optional[str] = None
     stimulus_type: Optional[str] = None
+    stimulus_file: Optional[str] = None
+    stimulus_data: Optional[Union[np.ndarray, List[float]]] = None
     skip_sample: Optional[bool] = False
     additional_attributes: Optional[Dict[str, Any]] = None
     # compliting after creation
@@ -79,7 +81,7 @@ class Sample:
 
     def __add__(self, other: 'Sample') -> 'Sample':
         """
-        Adds another saple data to current.
+        Adds another sample data to current.
         TODO!
         """
         pass

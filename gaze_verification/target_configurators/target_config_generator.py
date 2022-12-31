@@ -3,11 +3,12 @@ import json
 from pathlib import Path
 from typeguard import typechecked
 from collections import defaultdict
-from typing import List, Dict, Union, TypeVar
+from typing import List, Dict, Union, TypeVar, Optional
 
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
 from gaze_verification.data_objects.sample import Sample, Samples
+from gaze_verification.data_objects.target import Target, ClassificationTarget
 from gaze_verification.target_splitters.target_scheme import TargetScheme
 
 # Assumes that targets labels can be anything: str, int, etc.
@@ -59,7 +60,8 @@ class TargetConfigGenerator(AlgorithmAbstract):
         :rtype: Dict[str, List[str]]
         """
         # Extract unique targets from dataset
-        targets_config = TargetConfigGenerator.extract_targets(data)
+        targets_config = TargetConfigGenerator.extract_targets(data,
+                                                               target_field=kwargs.pop('target_field', 'user_id'))
 
         # Separate targets & samples with selected schema into splits
         splitter = self.target_scheme.value(**kwargs)
@@ -117,7 +119,8 @@ class TargetConfigGenerator(AlgorithmAbstract):
         self.output_dir = output_dir
 
     @classmethod
-    def extract_targets(cls, data: Union[List[Sample], Samples]) -> Dict[TargetLabelType, dict]:
+    def extract_targets(cls, data: Union[List[Sample], Samples],
+                        target_field: Optional[str] = "user_id") -> Dict[TargetLabelType, dict]:
         """
         Collects unique target's names and their attributes (like dataset typ, etc.).
 
@@ -133,11 +136,16 @@ class TargetConfigGenerator(AlgorithmAbstract):
                  ...
                  }
         """
+        if not hasattr(data[0], target_field):
+            raise AttributeError(f"Requested for targets extraction field name: `{target_field}` "
+                                 "do not exists in provided samples!")
         unique_targets = defaultdict(dict)
         for sample in data:
-            target_name = sample.user_id
+            target_name = getattr(sample, target_field)
             if target_name is None:
                 continue
+            elif isinstance(target_name, ClassificationTarget):
+                target_name = target_name.name
 
             unique_targets[target_name] = {
                 "skip": sample.skip_sample

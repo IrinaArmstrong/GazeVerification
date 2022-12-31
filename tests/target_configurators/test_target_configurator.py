@@ -9,7 +9,7 @@ class TestTargetConfigurator(unittest.TestCase):
     def __init__(self, method_name="runTest"):
         super().__init__(method_name)
         self._current_dir = Path().resolve()
-        self._config_path = self._current_dir / "targets_config" / "targets_config.json"
+        self._config_path = self._current_dir / "targets_config_test" / "targets_config.json"
 
     def test_configurator_initialization(self):
         configurator = TargetConfigurator(str(self._config_path))
@@ -22,7 +22,7 @@ class TestTargetConfigurator(unittest.TestCase):
             reference_config = json.load(f)
         target_to_skip = "8"
         ref_idx2target = [target_name for target_name in reference_config.keys() if target_name != target_to_skip]
-        ref_target2idx = {target_name: int(target_name) for target_name in reference_config.keys() if
+        ref_target2idx = {target_name: int(i) for i, target_name in enumerate(reference_config.keys()) if
                           target_name != target_to_skip}
 
         configurator = TargetConfigurator(str(self._config_path))
