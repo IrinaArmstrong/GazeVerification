@@ -36,7 +36,7 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         :param data: Samples
         """
         if isinstance(data[0].label, ClassificationTarget):
-            targets = [sample.label.name for sample in data]
+            targets = [str(sample.label.name) for sample in data]
         # Currently no support for other kinds of Targets
         else:
             targets = [sample.label for sample in data]
@@ -47,7 +47,7 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
                             targets_split: Dict[str, List[TargetLabelType]]):
         """
         Check data types consistency of targets splits and targets.
-                """
+        """
         if not (isinstance(targets, np.ndarray) or isinstance(targets, list) or isinstance(targets, tuple)):
             raise AttributeError(f"Provided targets should a type of `np.ndarray`, or array-like: `list` or `tuple`, ",
                                  f" provided parameter is of type: {type(targets)}")
