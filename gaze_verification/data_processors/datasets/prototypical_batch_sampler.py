@@ -14,7 +14,7 @@ class PrototypicalBatchSampler(FewShotBatchSampler):
     for 'classes_per_it' random classes.
     __len__ returns the number of episodes per epoch (same as 'self.iterations').
     """
-    def __init__(self, targets: Union[List[int], List[Target]],
+    def __init__(self, targets: Union[List[int], List[Target], list],
                  k_way: int, n_support: int, n_query: int = 0,
                  include_query: bool = False,
                  iterations: int = 100):

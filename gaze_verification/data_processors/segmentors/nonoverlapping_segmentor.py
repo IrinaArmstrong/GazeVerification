@@ -90,7 +90,12 @@ class NonOverlappingSegmentor(SegmentorAbstract):
                                                                                               self.segment_length),
                                                                                       dx=self.segment_length,
                                                                                       dy=1), axis=0)):
+            segment_start = segment_idx * self.segment_length  # include start index
+            segment_end = (segment_idx + 1) * self.segment_length + 1  # exclude end index
+            if segment_end > sample_data.shape[-1]:
+                segment_end = sample_data.shape[-1]
             additional_attributes = sample.additional_attributes
+            additional_attributes['index_range'] = (segment_start, segment_end)
             additional_attributes['segment_idx'] = segment_idx
             additional_attributes['initial_sample_guid'] = sample.guid
             additional_attributes['completness_ratio'] = 1  # always completed data
@@ -99,12 +104,17 @@ class NonOverlappingSegmentor(SegmentorAbstract):
                 seq_id=sample.seq_id,
                 label=sample.label,
                 session_id=sample.session_id,
+                user_id=sample.user_id,
                 data=segment,
                 data_type=sample.data_type,
                 dataset_type=sample.dataset_type,
                 stimulus_type=sample.stimulus_type,
+                stimulus_data=sample.stimulus_data,
+                stimulus_file=sample.stimulus_file,
                 skip_sample=sample.skip_sample,
-                additional_attributes=additional_attributes
+                additional_attributes=additional_attributes,
+                predicted_label=sample.predicted_label
+
             )
             segments.append(segment_sample)
 
@@ -127,12 +137,16 @@ class NonOverlappingSegmentor(SegmentorAbstract):
                 seq_id=sample.seq_id,
                 label=sample.label,
                 session_id=sample.session_id,
+                user_id=sample.user_id,
                 data=segment,
                 data_type=sample.data_type,
                 dataset_type=sample.dataset_type,
                 stimulus_type=sample.stimulus_type,
+                stimulus_data=sample.stimulus_data,
+                stimulus_file=sample.stimulus_file,
                 skip_sample=sample.skip_sample,
-                additional_attributes=additional_attributes
+                additional_attributes=additional_attributes,
+                predicted_label=sample.predicted_label
             )
             segments.append(segment_sample)
 
