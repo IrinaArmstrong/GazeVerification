@@ -10,7 +10,7 @@ from gaze_verification.modelling.inference.inference_model_abstract import Infer
 # Predictor
 from gaze_verification.predictors import PredictorAbstract
 
-# Body --> todo!
+# Body
 from gaze_verification.bodies.body_abstract import BodyAbstract
 
 # Embedder
@@ -78,7 +78,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         """
         label_logits = self._forward(*args, **kwargs)
 
-        label_scores, label_probas, label_preds = self.predictor.head.predict_from_logits(
+        label_scores, label_probas, label_preds = self.predictor.head.predict(
             label_logits, *args, **kwargs
         )
         return (
@@ -96,7 +96,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         ) = self.forward(**train_batch)
 
         # then compute loss in predictor
-        train_loss = self.predictor.compute_loss(
+        train_loss = self.predictor.do_compute_loss(
             label_logits=label_logits,
             **train_batch
         )
@@ -116,7 +116,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         ) = self.forward(**val_batch)
 
         # then compute loss in predictor
-        val_loss = self.predictor.compute_loss(
+        val_loss = self.predictor.do_compute_loss(
             label_logits=label_logits,
             **val_batch
         )

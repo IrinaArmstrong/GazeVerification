@@ -1,0 +1,111 @@
+{
+  "conv": [
+    {
+      "conv": {
+        "in_channels": 4,
+        "out_channels": 128,
+        "kernel_size": 3,
+        "stride": 2,
+        "dilation": 1
+      },
+      "cbam": {
+        "gate_channels": 128,
+        "reduction_ratio": 16,
+        "no_spatial": true
+      },
+      "pool_type": "MaxPool1d",
+      "pool": {
+        "kernel_size": 5,
+        "stride": 2,
+        "padding": 0
+      },
+      "norm_type": "BatchNorm1d",
+      "norm": {
+        "num_features": 128
+      },
+      "activation_type": "ReLU",
+      "activation": {
+        "inplace": true
+      }
+    },
+    {
+      "conv": {
+        "in_channels": 128,
+        "out_channels": 256,
+        "kernel_size": 3,
+        "stride": 2,
+        "dilation": 1
+      },
+      "cbam": {
+        "gate_channels": 256,
+        "reduction_ratio": 16,
+        "no_spatial": true
+      },
+      "pool_type": "MaxPool1d",
+      "pool": {
+        "kernel_size": 3,
+        "stride": 2,
+        "padding": 0
+      },
+      "norm_type": "BatchNorm1d",
+      "norm": {
+        "num_features": 256
+      },
+      "activation_type": "ReLU",
+      "activation": {
+        "inplace": true
+      }
+    },
+    {
+      "conv": {
+        "in_channels": 256,
+        "out_channels": 256,
+        "kernel_size": 3,
+        "stride": 2,
+        "dilation": 1
+      },
+      "cbam": {
+        "gate_channels": 256,
+        "reduction_ratio": 16,
+        "no_spatial": true
+      },
+      "pool_type": "MaxPool1d",
+      "pool": {
+        "kernel_size": 3,
+        "stride": 2,
+        "padding": 0
+      },
+      "norm_type": "BatchNorm1d",
+      "norm": {
+        "num_features": 256
+      },
+      "activation_type": "ReLU",
+      "activation": {
+        "inplace": true
+      }
+    }
+  ],
+  "fc": [
+    {
+      "linear": {
+        "out_features": 512
+      },
+      "dropout": {
+        "p": 0.5
+      },
+      "activation_type": "ReLU",
+      "activation": {
+        "inplace": true
+      }
+    },
+    {
+      "linear": {
+        "in_features": 512,
+        "out_features": 128
+      },
+      "dropout": {
+        "p": 0.5
+      }
+    }
+  ]
+}

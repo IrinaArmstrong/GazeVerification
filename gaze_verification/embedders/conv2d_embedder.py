@@ -151,10 +151,7 @@ class Conv2DEmbedder(EmbedderAbstract):
             x = torch.unsqueeze(x, 1)
         elif len(x.size()) == 4:
             x = torch.squeeze(x, 1)
-        self._logger.info(f"CNN in: {x.size()}")
         output = self.model['cnn'](x.float())
-        self._logger.info(f"CNN out: {output.size()}")
         output = output.view(output.size()[0], -1)
-        self._logger.info(f"View out: {output.size()}")
         output = self.model['fc'](output)
         return output

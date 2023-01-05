@@ -1,7 +1,7 @@
 import torch
 from abc import abstractmethod, ABC
 from typeguard import typechecked
-from typing import Dict, List, Type
+from typing import Any, List, Type, Optional
 
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.data_objects import (Sample, Samples, Label, Target)
@@ -37,31 +37,19 @@ class PredictorAbstract(torch.nn.Module, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def create_targets(self, samples: Sample, is_predict: bool = False) -> Samples:
-        """
-        Take the fields responsible for target's labels from the sample and converts them into indices.
-        :param samples: data samples;
-        :type samples: Samples;
-        :param is_predict: whether model is running in predict mode;
-        :type is_predict: bool, defaults to False;
-        :return: data samples with targets labels converted to indexes;
-        :rtype: Dict[str, Any]
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def set_predicted_label(
             self,
             sample: Sample,
-            predicted_markup: Label,
-            inplace: bool = True
+            predicted_markup: Any,
+            predicted_probas: Optional[Any] = None,
+            inplace: Optional[bool] = True
     ) -> Sample:
         raise NotImplementedError
 
     def save_predictions_to_samples(
             self,
             samples: Samples,
-            predictions: List[Label],
+            predictions: List[Any],
             inplace: bool = True
     ) -> Samples:
         """
