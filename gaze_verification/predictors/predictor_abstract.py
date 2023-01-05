@@ -36,6 +36,9 @@ class PredictorAbstract(torch.nn.Module, ABC):
     def target_class(self) -> Type[Target]:
         raise NotImplementedError
 
+    def forward(self, body_output: torch.Tensor, **kwargs) -> torch.Tensor:
+        return self.head(body_output, **kwargs)
+
     @abstractmethod
     def set_predicted_label(
             self,

@@ -67,37 +67,35 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         """
         embedder_output = self.embedder.forward(*args, **kwargs)
         body_output = self.body(embedder_output, *args, **kwargs)
-        label_logits = self.predictor.get_logits(
-            body_output, **kwargs
-        )
-        return label_logits
+        predictor_output = self.predictor(body_output, **kwargs)
+        return predictor_output
 
     def forward(self, *args, **kwargs) -> Tuple[torch.Tensor, ...]:
         """
         Computes predictions, scores, predictions and logits.
         """
-        label_logits = self._forward(*args, **kwargs)
+        predictor_output = self._forward(*args, **kwargs)
 
-        label_scores, label_probas, label_preds = self.predictor.head.predict(
-            label_logits, *args, **kwargs
+        scores, probabilities, predictions = self.predictor.head.predict(
+            predictor_output, *args, **kwargs
         )
         return (
-            label_preds, label_scores,
-            label_logits, label_probas,
+            predictions, scores,
+            predictor_output, probabilities,
         )
 
     def training_step(self, train_batch, batch_idx):
         # run embedder + body + predictor
         (
-            label_preds,
-            label_scores,
-            label_logits,
-            label_probas,
+            predictions,
+            scores,
+            predictor_output,
+            probabilities,
         ) = self.forward(**train_batch)
 
         # then compute loss in predictor
-        train_loss = self.predictor.do_compute_loss(
-            label_logits=label_logits,
+        train_loss = self.predictor.compute_loss(
+            label_logits=predictor_output,
             **train_batch
         )
 
@@ -109,23 +107,23 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
     def validation_step(self, val_batch: Any, batch_idx: int):
         # run embedder + body + predictor
         (
-            label_preds,
-            label_scores,
-            label_logits,
-            label_probas
+            predictions,
+            scores,
+            predictor_output,
+            probabilities
         ) = self.forward(**val_batch)
 
         # then compute loss in predictor
-        val_loss = self.predictor.do_compute_loss(
-            label_logits=label_logits,
+        val_loss = self.predictor.compute_loss(
+            label_logits=predictor_output,
             **val_batch
         )
         # log loss
         logs = {"val_loss": val_loss}
 
         predictions = self.predictor.convert_batch_outputs_to_predictions(
-            predictions=label_preds,
-            probas=label_probas,
+            predictions=predictions,
+            probas=probabilities,
             **val_batch
         )
         return {
@@ -159,31 +157,31 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         """
         # run embedder + body + predictor
         (
-            label_preds,
-            label_scores,
-            label_logits,
-            label_probas
+            predictions,
+            scores,
+            predictor_output,
+            probabilities
         ) = self.forward(**batch)
 
         return (
-            label_preds,
-            label_scores,
-            label_logits,
-            label_probas
+            predictions,
+            scores,
+            predictor_output,
+            probabilities
         )
 
     def predict_batch(self, batch: dict):
         with torch.no_grad():
             (
-                label_preds,
-                label_scores,
-                label_logits,
-                label_probas
+                predictions,
+                scores,
+                predictor_output,
+                probabilities
             ) = self.forward(**batch)
 
         predictions = self.predictor.convert_batch_outputs_to_predictions(
-            label_preds=label_preds,
-            label_probas=label_probas,
+            label_preds=predictions,
+            label_probas=probabilities,
             **batch
         )
         return predictions

@@ -287,7 +287,8 @@ class PrototypicalHead(HeadAbstract):
     def predict(self, query_embeddings: torch.Tensor,
                 support_embeddings: Optional[torch.Tensor] = None,
                 support_labels: Optional[torch.Tensor] = None,
-                return_dists: Optional[bool] = False) -> Dict[str, Any]:
+                return_dists: Optional[bool] = False,
+                return_dict: Optional[bool] = False) -> Dict[str, Any]:
         """
         Calculate predictions - i.e. most probable class based on probabilities.
         :param support_labels:
@@ -296,7 +297,7 @@ class PrototypicalHead(HeadAbstract):
         :type query_embeddings:
         :param support_embeddings:
         :type support_embeddings:
-        :param return_dists: to return distances from all queries to all prototypes;
+        :param return_dict: to return distances from all queries to all prototypes;
         :type return_dists: torch.Tensor, [len(query_embeddings), len(prototypes)];
         :return: predicted classes and their probabilities, optionally distances.
         :rtype: Dict[str, Any].
@@ -329,12 +330,15 @@ class PrototypicalHead(HeadAbstract):
         # Get predicted labels
         # tuple of two output tensors (max, max_indices)
         probabilities, predictions = p_y.max(1)
-        output = {
-            "probabilities": probabilities,
-            "predictions": predictions
-        }
-        if return_dists:
-            output['distances'] = dists
+        if return_dict:
+            output = {
+                "probabilities": probabilities,
+                "predictions": predictions
+            }
+            if return_dists:
+                output['distances'] = dists
+        else:
+            output = (dists, probabilities, predictions)
         return output
 
     def score(self, embeddings: torch.Tensor,
