@@ -233,6 +233,7 @@ class PrototypicalHead(HeadAbstract):
     def euclidean_dist(x, y) -> torch.Tensor:
         """
         Compute euclidean distance between two tensors (x and y).
+        Equals to: torch.cdist(x, y, p=2)
         :param x: shape N x D
         :param y: shape M x D
         """
@@ -245,7 +246,7 @@ class PrototypicalHead(HeadAbstract):
         x = x.unsqueeze(1).expand(n, m, d)
         y = y.unsqueeze(0).expand(n, m, d)
 
-        return torch.pow(x - y, 2).sum(2)
+        return torch.sqrt(torch.pow(x - y, 2).sum(2))
 
     def init_prototypes(self, embeddings: List[torch.Tensor], labels: torch.Tensor) -> Dict[int, torch.Tensor]:
         """
@@ -285,9 +286,12 @@ class PrototypicalHead(HeadAbstract):
 
     def predict(self, query_embeddings: torch.Tensor,
                 support_embeddings: Optional[torch.Tensor] = None,
+                support_labels: Optional[torch.Tensor] = None,
                 return_dists: Optional[bool] = False) -> Dict[str, Any]:
         """
         Calculate predictions - i.e. most probable class based on probabilities.
+        :param support_labels:
+        :type support_labels:
         :param query_embeddings:
         :type query_embeddings:
         :param support_embeddings:
@@ -297,9 +301,16 @@ class PrototypicalHead(HeadAbstract):
         :return: predicted classes and their probabilities, optionally distances.
         :rtype: Dict[str, Any].
         """
+        def index_select(c):
+            return support_labels.eq(c).nonzero().squeeze(1)
+
         # If support_embeddings are provided, then use them for prototypes computation
-        if support_embeddings is not None:
-            prototypes = self.calculate_prototypes(support_embeddings)
+        if (support_embeddings is not None) and (support_labels is not None):
+            # get indexes of support samples by classes
+            classes = torch.unique(support_labels)
+            class_idxs = list(map(index_select, classes))
+            support_class_embeddings = [support_embeddings[idx_list] for idx_list in class_idxs]
+            prototypes = self.calculate_prototypes(support_class_embeddings)
         elif self.cold_prototypes is not None:
             prototypes = self.cold_prototypes
         else:
@@ -307,14 +318,17 @@ class PrototypicalHead(HeadAbstract):
                 "Predicting class for query samples requires prototype initialization."
                 "For this purpose, you should fulfill one of the following requirements: "
                 "\n - compute and initialize `cold_prototypes`;"
-                "\n - or provide `support_embeddings` as support set for 'hot' prototypes calculation."
+                "\n - or provide `support_embeddings` AND `support_labels` as support set "
+                "for 'hot' prototypes calculation."
             )
 
-        dists = self.euclidean_dist(query_embeddings, prototypes)  # count distances
-        log_p_y = nn.functional.log_softmax(-dists, dim=1).view(len(prototypes), len(query_embeddings), -1)
+        # count distances -> [n_classes, bs]
+        # [bs, embedding_size] * [n_classes, embedding_size].T = [bs, n_classes]
+        dists = self.euclidean_dist(query_embeddings, prototypes)
+        p_y = nn.functional.softmax(-dists, dim=1)
         # Get predicted labels
         # tuple of two output tensors (max, max_indices)
-        probabilities, predictions = log_p_y.max(2)
+        probabilities, predictions = p_y.max(1)
         output = {
             "probabilities": probabilities,
             "predictions": predictions
