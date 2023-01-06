@@ -30,7 +30,6 @@ class InferenceModelAbstract(torch.nn.Module):
             samples: Samples,
             *args,
             is_predict: bool = False,
-            cache_samples: bool = False,
             prepare_samples_fn_kwargs: Dict[str, Any],
             prepare_sample_fn_kwargs: Dict[str, Any],
             **kwargs
@@ -62,7 +61,7 @@ class InferenceModelAbstract(torch.nn.Module):
         return self.embedder
 
     @abstractmethod
-    def prepare_sample_fn(self, sample: Sample, is_predict: bool) -> Dict[str, Any]:
+    def prepare_sample_fn(self, sample: Sample, *args, **kwargs) -> Dict[str, Any]:
         """
         Contains a pipeline of transformations for preparing data from a raw Sample for model.
         The function can include various transformations,
@@ -71,7 +70,7 @@ class InferenceModelAbstract(torch.nn.Module):
         raise NotImplementedError
 
     @abstractmethod
-    def prepare_samples_fn(self, samples: Samples, is_predict: bool) -> Dict[str, Any]:
+    def prepare_samples_fn(self, samples: Samples, *args, **kwargs) -> Dict[str, Any]:
         """
         Contains a pipeline of transformations for preparing data from a raw Samples sequence for model.
         The function can include various transformations,

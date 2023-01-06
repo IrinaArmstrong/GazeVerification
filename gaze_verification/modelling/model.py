@@ -17,6 +17,39 @@ from gaze_verification.bodies.body_abstract import BodyAbstract
 from gaze_verification.embedders.embedder_abstract import EmbedderAbstract
 
 
+class ModelConfig:
+    """
+    Config for Model class.
+
+    It allows to
+        - set few shot learning parameters:
+                * n_classes;
+                * n_support;
+                * n_query;
+        - hold optimizer and lr_scheduler type and parameters;
+    """
+
+    def __init__(
+            self,
+            model_name: str,
+            n_classes: int,
+            n_support: int,
+            n_query: int,
+            optimizer_type: str,
+            optimizer_kwargs: Dict[str, Any],
+            lr_scheduler_type: str,
+            lr_scheduler_kwargs: Dict[str, Any]
+    ):
+        self.model_name = model_name
+        self.n_classes = n_classes
+        self.n_support = n_support
+        self.n_query = n_query
+        self.optimizer_type = optimizer_type
+        self.optimizer_kwargs = optimizer_kwargs
+        self.lr_scheduler_type = lr_scheduler_type
+        self.lr_scheduler_kwargs = lr_scheduler_kwargs
+
+
 @typechecked
 class Model(InferenceModelAbstract, TrainingModelAbstract):
     """
@@ -54,12 +87,34 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
             self,
             embedder: EmbedderAbstract,
             body: BodyAbstract,
-            predictor: PredictorAbstract
+            predictor: PredictorAbstract,
+            config: ModelConfig
     ):
         super().__init__(embedder, body, predictor)
+        self.config = config
 
     def get_embedder(self):
         return self.embedder
+
+    def configure_optimizers(self):
+        """
+        Create optimizer and learning rate scheduler.
+        """
+        optimizer_type = getattr(torch.optim, self.config.optimizer_type)
+        optimizer = optimizer_type(self.parameters(),
+                                   **self.config.optimizer_kwargs)
+
+        lr_scheduler_type = getattr(torch.optim.lr_scheduler, self.config.lr_scheduler_type)
+        scheduler = lr_scheduler_type(optimizer=optimizer,
+                                       **self.config.lr_scheduler_kwargs)
+        scheduler = {
+                'scheduler': scheduler,  # REQUIRED: The scheduler instance
+                'interval': 'step',
+                'frequency': 1,
+                "monitor": "val_loss",
+                "strict": False
+            }
+        return [optimizer], [scheduler]
 
     def _forward(self, *args, **kwargs) -> torch.Tensor:
         """
@@ -132,14 +187,46 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
             "predictions": predictions
         }
 
-    def collate_fn(self, batch: List[Sample]):
+    def collate_fn(self, samples: List[Dict[str, Any]],
+                   to_label_ids: bool = True) -> Dict[str, torch.Tensor]:
         """
         Function that takes in a batch of data Samples and puts the elements within the batch
         into a tensors with an additional outer dimension - batch size.
         The exact output type of each batch element will be a `torch.Tensor`.
         """
-        # todo: write it here or cretae as passed function
-        pass
+        batch = {}
+
+        # Special handling for labels.
+        # Ensure that tensor is created with the correct type
+        first = samples[0]
+        if not isinstance(first, dict):
+            raise AttributeError(
+                f"Input sample to collate_fn should be type of `dict`, got: {type(first)}"
+            )
+
+        if ("label" in first.keys()) and (first['label'] is not None):
+            if isinstance(first['label'], str) and to_label_ids:
+                labels = [
+                    self.predictor.co.get_target2idx(sample['label'])
+                    for sample in samples
+                ]
+            elif isinstance(first['label'], torch.Tensor):
+                labels = [sample['label'].item() for sample in samples]
+            else:
+                labels = [sample['label'] for sample in samples]
+            dtype = torch.long if type(labels[0]) is int else torch.float
+            batch["labels"] = torch.tensor(labels, dtype=dtype)
+
+        # Handling of all other data keys.
+        # Again, we will use the first element to figure out which key/values are not None for this model.
+        for k, v in first.items():
+            if (k not in ("label", "label_ids") and v is not None
+                    and not isinstance(v, str) and not isinstance(v, dict)):
+                if isinstance(v, torch.Tensor):
+                    batch[k] = torch.stack([sample[k] for sample in samples])
+                else:
+                    batch[k] = torch.tensor([sample[k] for sample in samples])
+        return batch
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:
         """
@@ -179,6 +266,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
                 probabilities
             ) = self.forward(**batch)
 
+        # Convert to list of Label instances
         predictions = self.predictor.convert_batch_outputs_to_predictions(
             label_preds=predictions,
             label_probas=probabilities,
@@ -221,22 +309,62 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
                 output.extend(batch_preds)
 
         for i in range(len(data)):
-            preds = output[i]
-            if isinstance(preds, Target):
-                data[i].predicted_label = preds
-            elif isinstance(preds, list):
+            prediction = output[i]
+            if isinstance(prediction, Label):
+                data[i].predicted_label = prediction
+            elif isinstance(prediction, list):
                 # todo: may be add post-processing
-                data[i].predicted_label = preds
+                data[i].predicted_label = prediction
             else:
-                raise ValueError(f"Unknown target type: {type(preds)}")
+                raise ValueError(f"Unknown target type: {type(prediction)}")
 
         return data
 
-    def save_valid_predictions_to_samples(
-            self,
-            samples: Samples,
-            predictions: List[Label]
-    ):
-        return self.predictor.save_valid_predictions_to_instances(
-            samples, predictions
-        )
+    def prepare_sample_fn(self, sample: Sample, *args, **kwargs) -> Dict[str, Any]:
+        """
+        Contains a pipeline of transformations for preparing data from a raw Sample for model.
+        The function can include various transformations,
+        for example: filtering, splitting into smaller parts of data, and so on.
+        """
+        raise NotImplementedError
+
+
+    def prepare_samples_fn(self, samples: Samples, *args, **kwargs) -> Dict[str, Any]:
+        """
+        Contains a pipeline of transformations for preparing data from a raw Samples sequence for model.
+        The function can include various transformations,
+        for example: filtering, splitting into smaller parts of data, and so on.
+        """
+        raise NotImplementedError
+
+    def compute_metrics(self, outputs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Calculate additional measures of classification performance.
+        """
+        pred_labels = torch.flatten(outputs.get('predictions'))
+        true_labels = torch.flatten(outputs.get('true_tags'))
+
+        metrics = dict()
+
+        # todo: combine base metrics and biometric (from metrics/)
+
+        return outputs
+
+    def log_metrics(self, loss: float = 0.0, suffix: str = '',
+                    metrics_results: Dict[str, float] = None,
+                    on_step: bool = False, on_epoch: bool = True):
+        """
+        To log metrics.
+        metrics_results - dict of key = metric name, val = value of metric;
+        """
+        # log loss
+        self.log(f"{suffix}_loss", loss, on_step=on_step,
+                 on_epoch=on_epoch, prog_bar=True, logger=True)
+        # log other metrics
+        if metrics_results is not None:
+            for key, val in metrics_results.items():
+                self.log(f"{suffix}_{key}", val,
+                         on_step=on_step,  # logs at this step
+                         on_epoch=on_epoch,  # logs epoch accumulated metrics.
+                         prog_bar=True,  # logs to the progress bar.
+                         logger=True)  # logs to the logger

@@ -148,7 +148,7 @@ class PrototypicalLabel(Label):
     :type distances: Optional[Union[torch.Tensor, np.ndarray]], defaults to None.
     """
     labels: List[Target]
-    probabilities: Optional[Dict[Union[str, int], float]] = None
+    probabilities: Optional[List[float]] = None
     distances: Optional[Union[torch.Tensor, np.ndarray]] = None
 
     def __iter__(self):
@@ -173,7 +173,7 @@ class PrototypicalLabel(Label):
         elif other.probabilities is None:
             probabilities = self.probabilities
         else:
-            probabilities = {**self.probabilities, **other.probabilities}
+            probabilities = [*self.probabilities, *other.probabilities]
 
         if self.distances is None:
             distances = other.distances
@@ -208,11 +208,7 @@ class PrototypicalLabel(Label):
             label = self.labels[i]
             s += f" {label}"
             if with_probabilities:
-                prob = self.probabilities.get(label.name)
-                if prob is None:
-                    prob = self.probabilities.get(label.id)
-                if prob is None:
-                    prob = "<not_found>"
+                prob = self.probabilities[i]
                 s += f" ({prob})"
             s += ", "
         return s

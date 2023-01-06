@@ -84,6 +84,7 @@ class TestPrototypicalPredictor(unittest.TestCase):
         sample = Sample(guid=0, seq_id=0, session_id=0, data=data)
         sample = predictor.set_predicted_label(sample, predicted_class_id, predicted_class_proba)
         self.assertTrue(sample.predicted_label is not None)
+        print(f"Predicted: {sample.predicted_label}")
 
     def test_predict(self):
         targets_config_path = str(
