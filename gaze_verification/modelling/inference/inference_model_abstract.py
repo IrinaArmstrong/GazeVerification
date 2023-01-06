@@ -60,23 +60,21 @@ class InferenceModelAbstract(torch.nn.Module):
     def get_embedder(self):
         return self.embedder
 
-    @abstractmethod
-    def prepare_sample_fn(self, sample: Sample, *args, **kwargs) -> Dict[str, Any]:
-        """
-        Contains a pipeline of transformations for preparing data from a raw Sample for model.
-        The function can include various transformations,
-        for example: filtering, splitting into smaller parts of data, and so on.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def prepare_samples_fn(self, samples: Samples, *args, **kwargs) -> Dict[str, Any]:
-        """
-        Contains a pipeline of transformations for preparing data from a raw Samples sequence for model.
-        The function can include various transformations,
-        for example: filtering, splitting into smaller parts of data, and so on.
-        """
-        raise NotImplementedError
+    # def prepare_sample_fn(self, sample: Sample, *args, **kwargs) -> Dict[str, Any]:
+    #     """
+    #     Contains a pipeline of transformations for preparing data from a raw Sample for model.
+    #     The function can include various transformations,
+    #     for example: filtering, splitting into smaller parts of data, and so on.
+    #     """
+    #     raise NotImplementedError
+    #
+    # def prepare_samples_fn(self, samples: Samples, *args, **kwargs) -> Dict[str, Any]:
+    #     """
+    #     Contains a pipeline of transformations for preparing data from a raw Samples sequence for model.
+    #     The function can include various transformations,
+    #     for example: filtering, splitting into smaller parts of data, and so on.
+    #     """
+    #     raise NotImplementedError
 
     @abstractmethod
     def collate_fn(self, data: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:

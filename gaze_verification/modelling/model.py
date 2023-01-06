@@ -1,7 +1,12 @@
+# Networks
 import torch
+import torch.nn as nn
+import torch.utils.data as data
+import torch.nn.functional as F
+import torchmetrics
 
 from typeguard import typechecked
-from typing import (List, Tuple, Dict, Any, Union)
+from typing import (List, Tuple, Dict, Any, Union, Optional)
 
 from gaze_verification.data_objects import (Samples, Sample, Label, Target)
 from gaze_verification.modelling.training.training_model_abstract import TrainingModelAbstract
@@ -32,18 +37,20 @@ class ModelConfig:
     def __init__(
             self,
             model_name: str,
-            n_classes: int,
-            n_support: int,
-            n_query: int,
+            n_support: 10,
+            n_query: 10,
+            iterations: 100,
+            n_classes: 5,
             optimizer_type: str,
             optimizer_kwargs: Dict[str, Any],
             lr_scheduler_type: str,
             lr_scheduler_kwargs: Dict[str, Any]
     ):
         self.model_name = model_name
-        self.n_classes = n_classes
         self.n_support = n_support
-        self.n_query = n_query
+        self.n_query=n_query
+        self.iterations=iterations
+        self.n_classes=n_classes
         self.optimizer_type = optimizer_type
         self.optimizer_kwargs = optimizer_kwargs
         self.lr_scheduler_type = lr_scheduler_type
@@ -88,10 +95,12 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
             embedder: EmbedderAbstract,
             body: BodyAbstract,
             predictor: PredictorAbstract,
+            metrics: Dict[str, Any],
             config: ModelConfig
     ):
         super().__init__(embedder, body, predictor)
         self.config = config
+        self.metrics = metrics
 
     def get_embedder(self):
         return self.embedder
@@ -140,6 +149,12 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         )
 
     def training_step(self, train_batch, batch_idx):
+        """
+        Compute and return the training loss and some additional metrics.
+        """
+        # Get true targets from batch
+        true_labels = train_batch.get("labels")
+
         # run embedder + body + predictor
         (
             predictions,
@@ -151,15 +166,39 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         # then compute loss in predictor
         train_loss = self.predictor.compute_loss(
             label_logits=predictor_output,
-            **train_batch
+            labels=true_labels
         )
+        # compute metrics
+        metrics_results = self.compute_metrics({"predictions": predictions, "true_labels": true_labels})
 
-        # log loss
-        logs = {"train_loss": train_loss}
-        self.log("train_loss", train_loss)
-        return {"loss": train_loss, "log": logs}
+        # logs metrics for each training_step
+        self.log_metrics(loss=train_loss, suffix='train',
+                         metrics_results=metrics_results,
+                         on_step=True,
+                         on_epoch=True)
+
+        return {
+            "loss": train_loss,
+            "metrics_results": metrics_results
+        }
+
+    def training_epoch_end(self, outputs):
+        """
+        Called at the end of the training epoch
+        with the outputs of all training steps.
+        Here needed for ReduceLROnPlateau scheduler.
+        """
+        sch = self.lr_schedulers()
+
+        # If the selected scheduler is a ReduceLROnPlateau scheduler.
+        if isinstance(sch, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            sch.step(self.trainer.callback_metrics["val_loss"])
 
     def validation_step(self, val_batch: Any, batch_idx: int):
+
+        # Get true targets from batch
+        true_labels = val_batch.get("labels")
+
         # run embedder + body + predictor
         (
             predictions,
@@ -173,18 +212,17 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
             label_logits=predictor_output,
             **val_batch
         )
-        # log loss
-        logs = {"val_loss": val_loss}
+        # compute metrics
+        metrics_results = self.compute_metrics({"predictions": predictions, "true_labels": true_labels})
 
-        predictions = self.predictor.convert_batch_outputs_to_predictions(
-            predictions=predictions,
-            probas=probabilities,
-            **val_batch
-        )
+        # logs metrics for each training_step
+        self.log_metrics(loss=val_loss, suffix='val',
+                         metrics_results=metrics_results,
+                         on_step=True,
+                         on_epoch=True)
         return {
             "loss": val_loss,
-            "log": logs,
-            "predictions": predictions
+            "metrics_results": metrics_results
         }
 
     def collate_fn(self, samples: List[Dict[str, Any]],
@@ -207,7 +245,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         if ("label" in first.keys()) and (first['label'] is not None):
             if isinstance(first['label'], str) and to_label_ids:
                 labels = [
-                    self.predictor.co.get_target2idx(sample['label'])
+                    self.predictor.configurator.get_target2idx(sample['label'])
                     for sample in samples
                 ]
             elif isinstance(first['label'], torch.Tensor):
@@ -320,46 +358,35 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
 
         return data
 
-    def prepare_sample_fn(self, sample: Sample, *args, **kwargs) -> Dict[str, Any]:
-        """
-        Contains a pipeline of transformations for preparing data from a raw Sample for model.
-        The function can include various transformations,
-        for example: filtering, splitting into smaller parts of data, and so on.
-        """
-        raise NotImplementedError
-
-
-    def prepare_samples_fn(self, samples: Samples, *args, **kwargs) -> Dict[str, Any]:
-        """
-        Contains a pipeline of transformations for preparing data from a raw Samples sequence for model.
-        The function can include various transformations,
-        for example: filtering, splitting into smaller parts of data, and so on.
-        """
-        raise NotImplementedError
-
     def compute_metrics(self, outputs: Dict[str, Any]) -> Dict[str, Any]:
         """
         Calculate additional measures of classification performance.
         """
         pred_labels = torch.flatten(outputs.get('predictions'))
-        true_labels = torch.flatten(outputs.get('true_tags'))
+        true_labels = torch.flatten(outputs.get('true_labels'))
 
-        metrics = dict()
+        metrics_results = dict()
+        for metric_name, metric in self.metrics.items():
+            metric_score = metric(pred_labels, true_labels)
+            metrics_results[metric_name] = metric_score
 
-        # todo: combine base metrics and biometric (from metrics/)
+        return metrics_results
 
-        return outputs
-
-    def log_metrics(self, loss: float = 0.0, suffix: str = '',
-                    metrics_results: Dict[str, float] = None,
-                    on_step: bool = False, on_epoch: bool = True):
+    def log_metrics(self, loss: float = 0.0,
+                    suffix: str = '',
+                    metrics_results: Optional[Dict[str, float]] = None,
+                    on_step: Optional[bool] = False,
+                    on_epoch: Optional[bool] = True):
         """
         To log metrics.
         metrics_results - dict of key = metric name, val = value of metric;
         """
         # log loss
-        self.log(f"{suffix}_loss", loss, on_step=on_step,
-                 on_epoch=on_epoch, prog_bar=True, logger=True)
+        self.log(f"{suffix}_loss", loss,
+                 on_step=on_step,
+                 on_epoch=on_epoch,
+                 prog_bar=True,
+                 logger=True)
         # log other metrics
         if metrics_results is not None:
             for key, val in metrics_results.items():

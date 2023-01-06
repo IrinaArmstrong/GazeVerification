@@ -1,0 +1,17 @@
+{
+  "model_name": "PrototypicalCNN_4dim_test",
+  "n_support": 10,
+  "n_query": 10,
+  "iterations": 100,
+  "n_classes": 5,
+  "optimizer_type": "AdamW",
+  "optimizer_kwargs": {
+    "lr": 1e-5,
+    "weight_decay": 0.01
+  },
+  "lr_scheduler_type": "StepLR",
+  "lr_scheduler_kwargs": {
+    "gamma": 0.1,
+    "step_size": 5
+  }
+}

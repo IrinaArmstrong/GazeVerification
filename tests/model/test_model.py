@@ -4,8 +4,10 @@ import json
 import numpy as np
 from pathlib import Path
 
+import torchmetrics
+
 from gaze_verification.data_objects import Sample, Samples
-from gaze_verification.modelling import Model
+from gaze_verification.modelling import Model, ModelConfig
 from gaze_verification.embedders import Conv2DEmbedder, Conv2dEmbedderConfig
 from gaze_verification.bodies import EmptyBody, EmptyBodyConfig
 from gaze_verification.predictors import PrototypicalPredictor
@@ -19,13 +21,13 @@ class TestModel(unittest.TestCase):
 
     def test_create(self):
         targets_config_path = str(
-            self._current_dir / "target_configurators" / "targets_config_test/targets_config.json")
+            self._current_dir.parent / "target_configurators" / "targets_config_test/targets_config.json")
 
-        embedder_config_path = str(self._current_dir / "embedders" / "test_embedder_4d_config_params.json")
+        embedder_config_path = str(self._current_dir.parent / "embedders" / "test_embedder_4d_config_params.json")
         with open(embedder_config_path, encoding="utf-8") as f:
             embedder_config_json = json.load(f)
 
-        body_config_path = str(self._current_dir / "bodies" / "test_empty_config_params.json")
+        body_config_path = str(self._current_dir.parent / "bodies" / "test_empty_config_params.json")
         with open(body_config_path, encoding="utf-8") as f:
             body_config_json = json.load(f)
 
@@ -63,10 +65,20 @@ class TestModel(unittest.TestCase):
             is_predict=False
         )
 
+        # Metrics
+        metrics = {"accuracy": torchmetrics.Accuracy}
+
         # Model
+        model_config_path = str(self._current_dir / "model_config.json")
+        with open(model_config_path, encoding="utf-8") as f:
+            model_config_json = json.load(f)
+
+        model_config = ModelConfig(**model_config_json)
         model = Model(embedder=embedder,
                       body=body,
-                      predictor=predictor)
+                      predictor=predictor,
+                      config=model_config,
+                      metrics=metrics)
         print(f"Model created!\n{model}")
 
     def test_forward(self):
@@ -79,13 +91,13 @@ class TestModel(unittest.TestCase):
         predictor_embedding_size = 56
 
         targets_config_path = str(
-            self._current_dir / "target_configurators" / "targets_config_test/targets_config.json")
+            self._current_dir.parent / "target_configurators" / "targets_config_test/targets_config.json")
 
-        embedder_config_path = str(self._current_dir / "embedders" / "test_embedder_4d_config_params.json")
+        embedder_config_path = str(self._current_dir.parent / "embedders" / "test_embedder_4d_config_params.json")
         with open(embedder_config_path, encoding="utf-8") as f:
             embedder_config_json = json.load(f)
 
-        body_config_path = str(self._current_dir / "bodies" / "test_empty_config_params.json")
+        body_config_path = str(self._current_dir.parent / "bodies" / "test_empty_config_params.json")
         with open(body_config_path, encoding="utf-8") as f:
             body_config_json = json.load(f)
 
@@ -121,10 +133,20 @@ class TestModel(unittest.TestCase):
             is_predict=False
         )
 
+        # Metrics
+        metrics = {"accuracy": torchmetrics.Accuracy}
+
         # Model
+        model_config_path = str(self._current_dir / "model_config.json")
+        with open(model_config_path, encoding="utf-8") as f:
+            model_config_json = json.load(f)
+
+        model_config = ModelConfig(**model_config_json)
         model = Model(embedder=embedder,
                       body=body,
-                      predictor=predictor)
+                      predictor=predictor,
+                      config=model_config,
+                      metrics=metrics)
         print(f"Model created!\n{model}")
 
         # Create dummy inputs
