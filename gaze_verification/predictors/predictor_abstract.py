@@ -1,7 +1,7 @@
 import torch
 from abc import abstractmethod, ABC
 from typeguard import typechecked
-from typing import Any, List, Type, Optional
+from typing import Any, List, Type, Optional, Union, Dict
 
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.data_objects import (Sample, Samples, Label, Target)
@@ -102,15 +102,15 @@ class PredictorAbstract(torch.nn.Module, ABC):
             self,
             label_logits,
             labels
-    ) -> torch.Tensor:
+    ) -> Union[Dict[str, torch.Tensor], torch.Tensor]:
         """
         Compute loss given the output tensors.
         :param label_logits: label logits;
         :type label_logits: Optional[torch.Tensor], defaults to None;
         :param labels: labels;
         :type labels: Optional[torch.Tensor], defaults to None;
-        :return: calculated loss value;
-        :rtype: torch.Tensor.
+        :return: calculated loss value and some additional parameters (optionally);
+        :rtype: Union[Dict[str, torch.Tensor], torch.Tensor].
         """
         raise NotImplementedError
 

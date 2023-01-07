@@ -37,10 +37,11 @@ class ModelConfig:
     def __init__(
             self,
             model_name: str,
-            n_support: 10,
-            n_query: 10,
-            iterations: 100,
-            n_classes: 5,
+            n_support: int,
+            n_query: int,
+            iterations: int,
+            n_classes: int,
+            embedding_size: int,
             optimizer_type: str,
             optimizer_kwargs: Dict[str, Any],
             lr_scheduler_type: str,
@@ -48,9 +49,10 @@ class ModelConfig:
     ):
         self.model_name = model_name
         self.n_support = n_support
-        self.n_query=n_query
-        self.iterations=iterations
-        self.n_classes=n_classes
+        self.n_query = n_query
+        self.iterations = iterations
+        self.n_classes = n_classes
+        self.embedding_size = embedding_size
         self.optimizer_type = optimizer_type
         self.optimizer_kwargs = optimizer_kwargs
         self.lr_scheduler_type = lr_scheduler_type
@@ -115,59 +117,71 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
 
         lr_scheduler_type = getattr(torch.optim.lr_scheduler, self.config.lr_scheduler_type)
         scheduler = lr_scheduler_type(optimizer=optimizer,
-                                       **self.config.lr_scheduler_kwargs)
+                                      **self.config.lr_scheduler_kwargs)
         scheduler = {
-                'scheduler': scheduler,  # REQUIRED: The scheduler instance
-                'interval': 'step',
-                'frequency': 1,
-                "monitor": "val_loss",
-                "strict": False
-            }
+            'scheduler': scheduler,  # REQUIRED: The scheduler instance
+            'interval': 'step',
+            'frequency': 1,
+            "monitor": "val_loss",
+            "strict": False
+        }
         return [optimizer], [scheduler]
 
-    def _forward(self, *args, **kwargs) -> torch.Tensor:
+    def _forward(self, **kwargs) -> torch.Tensor:
         """
         Compute logits.
         """
-        embedder_output = self.embedder.forward(*args, **kwargs)
-        body_output = self.body(embedder_output, *args, **kwargs)
+        data = kwargs.pop("data")
+        embedder_output = self.embedder.forward(data, **kwargs)
+        body_output = self.body(embedder_output, **kwargs)
         predictor_output = self.predictor(body_output, **kwargs)
         return predictor_output
 
-    def forward(self, *args, **kwargs) -> Tuple[torch.Tensor, ...]:
+    def forward(self, **kwargs) -> Tuple[torch.Tensor, ...]:
         """
         Computes predictions, scores, predictions and logits.
         """
-        predictor_output = self._forward(*args, **kwargs)
-
-        scores, probabilities, predictions = self.predictor.head.predict(
-            predictor_output, *args, **kwargs
-        )
-        return (
-            predictions, scores,
-            predictor_output, probabilities,
-        )
+        is_predict = kwargs.pop('is_predict', True)
+        predictor_output = self._forward(**kwargs)  # gets embeddings from head
+        if is_predict:
+            scores, probabilities, predictions = self.predictor.head.predict(
+                predictor_output, **kwargs, return_dict=False, return_dists=True
+            )
+            return (
+                predictions,
+                scores,
+                predictor_output,
+                probabilities,
+            )
+        else:
+            # (loss, y_hat, target_inds, acc_val, log_p_y, dists)
+            loss, predictions, true_labels, accuracy, probabilities, scores = self.predictor.head.score(
+                predictor_output, return_dict=False, return_dists=True, **kwargs
+            )
+            return (
+                loss,
+                predictions,
+                true_labels,
+                accuracy,
+                probabilities,
+                scores
+            )
 
     def training_step(self, train_batch, batch_idx):
         """
         Compute and return the training loss and some additional metrics.
         """
-        # Get true targets from batch
-        true_labels = train_batch.get("labels")
-
-        # run embedder + body + predictor
-        (
-            predictions,
-            scores,
-            predictor_output,
-            probabilities,
-        ) = self.forward(**train_batch)
-
+        # run embedder + body + predictor embeddings ->
         # then compute loss in predictor
-        train_loss = self.predictor.compute_loss(
-            label_logits=predictor_output,
-            labels=true_labels
-        )
+        (
+            train_loss,
+            predictions,
+            true_labels,
+            accuracy,
+            probabilities,
+            scores
+        ) = self.forward(**train_batch, is_predict=False)
+
         # compute metrics
         metrics_results = self.compute_metrics({"predictions": predictions, "true_labels": true_labels})
 
@@ -196,22 +210,17 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
 
     def validation_step(self, val_batch: Any, batch_idx: int):
 
-        # Get true targets from batch
-        true_labels = val_batch.get("labels")
-
-        # run embedder + body + predictor
-        (
-            predictions,
-            scores,
-            predictor_output,
-            probabilities
-        ) = self.forward(**val_batch)
-
+        # run embedder + body + predictor embeddings ->
         # then compute loss in predictor
-        val_loss = self.predictor.compute_loss(
-            label_logits=predictor_output,
-            **val_batch
-        )
+        (
+            val_loss,
+            predictions,
+            true_labels,
+            accuracy,
+            probabilities,
+            scores
+        ) = self.forward(**val_batch, is_predict=False)
+
         # compute metrics
         metrics_results = self.compute_metrics({"predictions": predictions, "true_labels": true_labels})
 
@@ -286,7 +295,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
             scores,
             predictor_output,
             probabilities
-        ) = self.forward(**batch)
+        ) = self.forward(**batch, is_predict=True)
 
         return (
             predictions,
@@ -372,15 +381,18 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
 
         return metrics_results
 
-    def log_metrics(self, loss: float = 0.0,
+    def log_metrics(self,
+                    loss: Union[float, torch.Tensor] = 0.0,
                     suffix: str = '',
-                    metrics_results: Optional[Dict[str, float]] = None,
+                    metrics_results: Optional[Union[Dict[str, float], Any]] = None,
                     on_step: Optional[bool] = False,
                     on_epoch: Optional[bool] = True):
         """
         To log metrics.
         metrics_results - dict of key = metric name, val = value of metric;
         """
+        if isinstance(loss, torch.Tensor):
+            loss = loss.cpu().detach().item()
         # log loss
         self.log(f"{suffix}_loss", loss,
                  on_step=on_step,

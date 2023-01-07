@@ -146,7 +146,7 @@ class Conv2DEmbedder(EmbedderAbstract):
         seq = torch.nn.Sequential(*layers)
         return seq
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
         if len(x.size()) == 2:
             x = torch.unsqueeze(x, 1)
         elif len(x.size()) == 4:

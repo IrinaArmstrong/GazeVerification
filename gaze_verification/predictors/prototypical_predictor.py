@@ -61,7 +61,7 @@ class PrototypicalPredictor(PredictorAbstract):
             label_logits: torch.Tensor,
             labels: torch.Tensor,
             **kwargs
-    ) -> torch.Tensor:
+    ) -> Union[Dict[str, torch.Tensor], torch.Tensor]:
         """
         Compute loss given the output tensors with head.
         :param label_logits: label logits;
@@ -69,7 +69,7 @@ class PrototypicalPredictor(PredictorAbstract):
         :param labels: labels;
         :type labels: torch.Tensor;
         :return: calculated loss value;
-        :rtype: torch.Tensor.
+        :rtype: Union[Dict[str, torch.Tensor], torch.Tensor].
         """
         outputs = self.head.score(label_logits, labels)
         return outputs.get('loss')

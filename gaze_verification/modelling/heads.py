@@ -288,7 +288,8 @@ class PrototypicalHead(HeadAbstract):
                 support_embeddings: Optional[torch.Tensor] = None,
                 support_labels: Optional[torch.Tensor] = None,
                 return_dists: Optional[bool] = False,
-                return_dict: Optional[bool] = False) -> Dict[str, Any]:
+                return_dict: Optional[bool] = False,
+                **kwargs) -> Union[Tuple[Any, Any], Dict[str, Any]]:
         """
         Calculate predictions - i.e. most probable class based on probabilities.
         :param support_labels:
@@ -341,8 +342,13 @@ class PrototypicalHead(HeadAbstract):
             output = (dists, probabilities, predictions)
         return output
 
-    def score(self, embeddings: torch.Tensor,
-              labels: torch.Tensor) -> Tuple[Any, Any]:
+    def score(self,
+              embeddings: torch.Tensor,
+              labels: torch.Tensor,
+              return_dists: Optional[bool] = True,
+              return_dict: Optional[bool] = True,
+              **kwargs
+              ) -> Union[Tuple[Any, Any], Dict[str, Any]]:
         """
         Compute the barycentres by averaging the features of `self.n_support`
         samples for each class in target, computes then the distances from each
@@ -381,12 +387,19 @@ class PrototypicalHead(HeadAbstract):
         # Get predicted labels
         _, y_hat = log_p_y.max(2)
         acc_val = y_hat.eq(target_inds.squeeze()).float().mean()
-
-        output = {
-            'loss': loss,
-            'predictions': y_hat,
-            'true_tags': target_inds,
-            'accuracy': acc_val
-        }
+        if return_dict:
+            output = {
+                'loss': loss,
+                'predictions': y_hat,
+                'true_tags': target_inds,
+                'accuracy': acc_val,
+                "probabilities": log_p_y
+            }
+            if return_dists:
+                output["distances"] = dists
+        else:
+            output = (loss, y_hat, target_inds, acc_val, log_p_y)
+            if return_dists:
+                output += (dists,)
 
         return output

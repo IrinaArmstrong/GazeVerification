@@ -4,6 +4,7 @@
   "n_query": 10,
   "iterations": 100,
   "n_classes": 5,
+  "embedding_size": 128,
   "optimizer_type": "AdamW",
   "optimizer_kwargs": {
     "lr": 1e-5,

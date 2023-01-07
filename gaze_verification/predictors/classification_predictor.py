@@ -53,15 +53,15 @@ class ClassificationPredictor(PredictorAbstract):
             label_logits,
             labels,
             **kwargs
-    ) -> torch.Tensor:
+    ) -> Union[Dict[str, torch.Tensor], torch.Tensor]:
         """
         Compute loss given the output tensors with head.
         :param label_logits: label logits;
         :type label_logits: Optional[torch.Tensor], defaults to None;
         :param labels: labels;
         :type labels: Optional[torch.Tensor], defaults to None;
-        :return: calculated loss value;
-        :rtype: torch.Tensor.
+        :return: calculated loss value and some additional parameters (optionally);
+        :rtype: Union[Dict[str, torch.Tensor], torch.Tensor].
         """
         loss = self.head.score(label_logits, labels)
         return loss
