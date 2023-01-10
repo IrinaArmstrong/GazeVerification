@@ -377,6 +377,7 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         metrics_results = dict()
         for metric_name, metric in self.metrics.items():
             metric_score = metric(pred_labels, true_labels)
+            self._logger.info(f"{metric_name.upper()} on step = {metric_score}")
             metrics_results[metric_name] = metric_score
 
         return metrics_results

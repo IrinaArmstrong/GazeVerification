@@ -280,17 +280,13 @@ class TargetConfigurator:
         target_class = None
 
         # If we requested type/subtype of ClassificationTarget
-        if isinstance(target_cls, ClassificationTarget):
-            if isinstance(target, int):
-                target_class = target_cls(id=target,
-                                          name=self.idx2target(target))
-            elif isinstance(target, str):
-                target_class = target_cls(name=target,
-                                          id=self.target2idx(target))
-            else:
-                raise AttributeError(f"Target identifier type is unknown: {type(target)},"
-                                     "choose one from [`int`, `str`] and try again.")
+        if isinstance(target, int):
+            target_class = target_cls(id=target,
+                                      name=self.idx2target.get(target))
+        elif isinstance(target, str):
+            target_class = target_cls(name=target,
+                                      id=self.target2idx.get(target))
         else:
-            raise NotImplementedError(f"Currently regression type targets are unavailable.")
-
+            raise AttributeError(f"Target identifier type is unknown: {type(target)},"
+                                 "choose one from [`int`, `str`] and try again.")
         return target_class
