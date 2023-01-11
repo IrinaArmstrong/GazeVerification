@@ -126,6 +126,10 @@ class OverlappingSegmentor(SegmentorAbstract):
         if completness_ratio >= self.min_completness_ratio:
             expected_padding = int(np.ceil(expected_padding)) if int(expected_padding) < 1 else int(expected_padding)
             segment = sample_data[:, -int(self.segment_length - expected_padding):]
+
+            segment_start = int(self.segment_length - expected_padding)  # include start index
+            segment_end = sample_data.shape[-1]  # exclude end index
+
             segment = np.concatenate(
                 (segment,
                  np.full((sample_data.shape[0], expected_padding),
@@ -135,6 +139,7 @@ class OverlappingSegmentor(SegmentorAbstract):
             additional_attributes = sample.additional_attributes
             additional_attributes['segment_idx'] = segment_idx + 1
             additional_attributes['initial_sample_guid'] = sample.guid
+            additional_attributes['index_range'] = (segment_start, segment_end)
             additional_attributes['completness_ratio'] = completness_ratio
             segment_sample = Sample(
                 guid=sample.guid,  # further need to be re-assigned as here they appears to be not unique
