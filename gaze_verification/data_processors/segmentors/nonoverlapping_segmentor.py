@@ -83,7 +83,7 @@ class NonOverlappingSegmentor(SegmentorAbstract):
 
         n_complete_samples = int(np.floor(sample_data.shape[-1] / self.segment_length))
         completness_ratio = (sample_data.shape[-1] - n_complete_samples * self.segment_length) / self.segment_length
-
+        segment_idx = 0
         for segment_idx, segment in enumerate(np.squeeze(sequential_sliding_window_2d(sample_data,
                                                                                       window_size=(
                                                                                               n_dims,
@@ -121,6 +121,9 @@ class NonOverlappingSegmentor(SegmentorAbstract):
         # If last segment of sample's data is completed enough - add it also
         if completness_ratio >= self.min_completness_ratio:
             existing_segment_len = (sample_data.shape[-1] - n_complete_samples * self.segment_length)
+            segment_start = n_complete_samples * self.segment_length  # include start index
+            segment_end = sample_data.shape[-1]  # exclude end index
+
             segment = sample_data[:, -existing_segment_len:]
             segment = np.concatenate(
                 (segment,
@@ -129,8 +132,9 @@ class NonOverlappingSegmentor(SegmentorAbstract):
                 axis=1)
 
             additional_attributes = sample.additional_attributes
-            additional_attributes['segment_idx'] = segment_idx + 1
+            additional_attributes['segment_idx'] = (segment_idx + 1) if segment_idx != 0 else 0
             additional_attributes['initial_sample_guid'] = sample.guid
+            additional_attributes['index_range'] = (segment_start, segment_end)
             additional_attributes['completness_ratio'] = completness_ratio
             segment_sample = Sample(
                 guid=sample.guid,  # further need to be re-assigned as here they appears to be not unique
