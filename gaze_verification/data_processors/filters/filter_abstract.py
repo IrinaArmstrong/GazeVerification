@@ -29,7 +29,7 @@ class FilterAbstract(AlgorithmAbstract, ABC):
 
     def run(self, data: Samples, **kwargs) -> Samples:
         """
-        Process Samples to create new segmented ones.
+        Process Samples to create new filtered ones.
 
         :param data: Samples containing N filtered Samples
         :type data: Samples
