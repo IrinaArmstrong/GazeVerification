@@ -4,10 +4,15 @@ from gaze_verification.data_processors.segmentors.overlapping_segmentor import O
 from gaze_verification.data_processors.filters.savitzky_golay_filter_1d import SavitzkyGolayFilter1D
 from gaze_verification.data_processors.filters.savitzky_golay_filter_2d import SavitzkyGolayFilter2D
 
+from gaze_verification.data_processors.velocity_estimators.savgol_velocity_estimator import SavitzkyGolayVelocityEstimator
+from gaze_verification.data_processors.velocity_estimators.diff_velocity_estimator import SimpleDiffVelocityEstimator
+
 from gaze_verification.data_processors.normalizer import ZScoreNormalizer
 
 __all__ = [
     'NonOverlappingSegmentor', 'OverlappingSegmentor',
     'SavitzkyGolayFilter1D', 'SavitzkyGolayFilter2D',
-    'ZScoreNormalizer'
+    'ZScoreNormalizer',
+    'SavitzkyGolayVelocityEstimator',
+    'SimpleDiffVelocityEstimator'
 ]

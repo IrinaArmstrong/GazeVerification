@@ -1,9 +1,7 @@
 import torch
 import numpy as np
-from tqdm import tqdm
 from math import factorial
 from typeguard import typechecked
-from abc import ABC, abstractmethod
 from typing import Union, Any, List, Optional
 
 from gaze_verification.data_objects.sample import Sample, Samples
