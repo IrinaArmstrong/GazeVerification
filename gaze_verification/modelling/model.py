@@ -371,8 +371,8 @@ class Model(InferenceModelAbstract, TrainingModelAbstract):
         """
         Calculate additional measures of classification performance.
         """
-        pred_labels = torch.flatten(outputs.get('predictions'))
-        true_labels = torch.flatten(outputs.get('true_labels'))
+        pred_labels = torch.flatten(outputs.get('predictions')).detach().cpu()
+        true_labels = torch.flatten(outputs.get('true_labels')).detach().cpu()
 
         metrics_results = dict()
         for metric_name, metric in self.metrics.items():

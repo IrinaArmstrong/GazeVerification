@@ -377,7 +377,7 @@ class PrototypicalHead(HeadAbstract):
         query_samples = embeddings[query_idxs]  # get embeddings of query samples
         dists = self.euclidean_dist(query_samples, prototypes)  # count distances
         log_p_y = nn.functional.log_softmax(-dists, dim=1).view(n_classes, n_query, -1)
-        target_inds = torch.arange(0, n_classes)  # used: .to(device)
+        target_inds = torch.arange(0, n_classes).to(log_p_y.device)   # used: .to(device)
         target_inds = target_inds.view(n_classes, 1, 1)
         target_inds = target_inds.expand(n_classes, n_query, 1).long()
         # compute loss value
