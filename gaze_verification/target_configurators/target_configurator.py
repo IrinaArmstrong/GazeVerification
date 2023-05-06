@@ -1,7 +1,8 @@
 import json
 import numpy as np
 from typeguard import typechecked
-from typing import List, Any, Dict, Union, Set, Tuple, Type
+from typing import (List, Any, Dict, Union,
+                    Set, Tuple, Type, Optional)
 
 from gaze_verification.data_objects.sample import Samples
 from gaze_verification.data_objects.target import Target, ClassificationTarget
@@ -256,12 +257,18 @@ class TargetConfigurator:
                              f"This type is not in supported dataset types: {self.dataset_type_names}",
                              f"Skipping dataset type for target.")
 
-    def split_samples(self, data: Samples) -> Dict[str, Samples]:
+    def split_samples(self, data: Samples,
+                      target_field: Optional[str] = "label",
+                      split_by_name: Optional[bool] = False) -> Dict[str, Samples]:
         """
-        Split and (optionally) shuffle samples based on defined targets split
+        Split and (optionally) shuffle samples based on defined targets split.
+        :param split_by_name: whether to extract a str 'name' attribute from Target/Label.
+                Otherwise an integer 'id' attribute from Target/Label would be taken;
+        :type split_by_name: bool
         """
         # get list of target values (per sample)
-        targets = TargetSplitterAbstract.extract_targets(data=data)
+        targets = TargetSplitterAbstract.extract_targets(data=data, target_field=target_field,
+                                                         split_by_name=split_by_name)
         samples_split = TargetSplitterAbstract._split_samples(data=data,
                                                               targets=targets,
                                                               targets_split=self.datatype2names)

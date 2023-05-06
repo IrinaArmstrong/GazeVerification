@@ -105,25 +105,6 @@ class SavitzkyGolayFilter1D(FilterAbstract):
             return DerivativeOrder(derivative)
         return derivative
 
-    def _check_data(self, data: Any) -> np.ndarray:
-        """
-        Check validness of derivative selection.
-        """
-        if not (isinstance(data, np.ndarray) or isinstance(data, list) or isinstance(data, tuple)):
-            self._logger.error(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`, ",
-                               f" provided parameter is of type: {type(data)}")
-            raise AttributeError(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`")
-
-        if isinstance(data, list) or isinstance(data, tuple):
-            try:
-                data = np.asarray(data)
-            except Exception as e:
-                self._logger.error(f"Provided data should an array-like: `list` or `tuple`,"
-                                   " which is convertible to `np.ndarray` type.",
-                                   f" Provided parameter is of type: {type(data)} and raised error:\n{e}")
-                raise AttributeError(f"Provided data should be convertible to `np.ndarray`!\nIt raised error:\n{e}")
-        return data
-
     def filter_dataset(self, samples: Samples, **kwargs) -> Samples:
         """
         Create a new dataset containing filtered Samples.

@@ -54,25 +54,6 @@ class ZScoreNormalizer(AlgorithmAbstract):
         self.std = std
         self._hyperparameters = self.register_hyperparameters()
 
-    def _check_data(self, data: Any) -> np.ndarray:
-        """
-        Check validness of derivative selection.
-        """
-        if not (isinstance(data, np.ndarray) or isinstance(data, list) or isinstance(data, tuple)):
-            self._logger.error(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`, ",
-                               f" provided parameter is of type: {type(data)}")
-            raise AttributeError(f"Provided data should a type of `np.ndarray`, or array-like: `list` or `tuple`")
-
-        if isinstance(data, list) or isinstance(data, tuple):
-            try:
-                data = np.asarray(data)
-            except Exception as e:
-                self._logger.error(f"Provided data should an array-like: `list` or `tuple`,"
-                                   " which is convertible to `np.ndarray` type.",
-                                   f" Provided parameter is of type: {type(data)} and raised error:\n{e}")
-                raise AttributeError(f"Provided data should be convertible to `np.ndarray`!\nIt raised error:\n{e}")
-        return data
-
     def _normalize(self, data: Union[np.ndarray, torch.Tensor],
                    axis: int, inner_dtype: type, output_dtype: type,
                    ) -> np.ndarray:
@@ -96,7 +77,7 @@ class ZScoreNormalizer(AlgorithmAbstract):
     def normalize_sample(self, sample: Sample, axis: int,
                          inner_dtype: type, output_dtype: type) -> Sample:
         """
-        Filter data sequences from Samples according to predefined logic.
+        Normalize data sequences from Samples .
 
         :param sample: Sample object containing information about one Sample
         :type sample: Sample
@@ -119,7 +100,7 @@ class ZScoreNormalizer(AlgorithmAbstract):
     def normalize_samples(self, samples: Samples, axis: int,
                           inner_dtype: type, output_dtype: type) -> Samples:
         """
-        Filter data sequences from Samples according to predefined logic.
+        Normalize data sequences from Samples according to predefined logic.
 
         :param samples: un-normalize data of shape: [n_samples, n_dims] or [n_dims, n_samples].
         :type samples: array-like,
@@ -146,7 +127,7 @@ class ZScoreNormalizer(AlgorithmAbstract):
             except Exception as e:
                 self._logger.error(f"Error occurred during dataset normalization: {e}"
                                    f"\nSkipping sample: {sample.guid}.")
-                # keep sample even if it's data is not filtered
+                # keep sample even if it's data is not correct
                 if self.keep_erroneous_samples:
                     normalized_samples.append(sample)
 

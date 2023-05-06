@@ -2,7 +2,7 @@ import numpy as np
 from itertools import compress
 from typeguard import typechecked
 from abc import ABC, abstractmethod
-from typing import List, Dict, Union, TypeVar
+from typing import List, Dict, Union, TypeVar, Optional
 
 from gaze_verification.logging_handler import get_logger
 from gaze_verification.algorithm_abstract import AlgorithmAbstract
@@ -30,16 +30,25 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         self.seed = seed
 
     @staticmethod
-    def extract_targets(data: Samples) -> List[TargetLabelType]:
+    def extract_targets(data: Samples,
+                        target_field: Optional[str] = None,
+                        split_by_name: Optional[bool] = False) -> List[TargetLabelType]:
         """
         Extracts targets from the samples
         :param data: Samples
         """
-        if isinstance(data[0].label, ClassificationTarget):
-            targets = [str(sample.label.name) for sample in data]
+        target_field = 'label' if target_field is None else target_field
+        if not hasattr(data[0], target_field):
+            raise AttributeError(f"Requested for targets extraction field name: `{target_field}` "
+                                 "do not exists in provided samples!")
+        if isinstance(getattr(data[0], target_field), ClassificationTarget):
+            if split_by_name:
+                targets = [str(getattr(sample, target_field).name) for sample in data]
+            else:
+                targets = [str(getattr(sample, target_field).id) for sample in data]
         # Currently no support for other kinds of Targets
         else:
-            targets = [sample.label for sample in data]
+            targets = [getattr(sample, target_field) for sample in data]
         return targets
 
     @staticmethod
@@ -70,7 +79,9 @@ class TargetSplitterAbstract(AlgorithmAbstract, ABC):
         """
         TargetSplitterAbstract.targets_split_check(targets, targets_split)
         result = dict()
+        print("target type:", type(targets[0]))
         for split_name, split_targets in targets_split.items():
+            print(f"split_targets: {split_targets}")
             mask = list(map(lambda x: x in split_targets, targets))
             masked_targets = list(compress(data, mask))
             if len(masked_targets):

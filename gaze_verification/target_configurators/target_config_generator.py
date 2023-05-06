@@ -152,9 +152,8 @@ class TargetConfigGenerator(AlgorithmAbstract):
             }
         return dict(unique_targets)
 
-    @classmethod
     def construct_targets_config(
-            cls,
+            self,
             unique_targets: Dict[TargetLabelType, dict],
             targets_split: Dict[str, List[TargetLabelType]]
     ) -> Dict[TargetLabelType, dict]:
@@ -163,5 +162,10 @@ class TargetConfigGenerator(AlgorithmAbstract):
         """
         for split_name, split_targets in targets_split.items():
             for target in split_targets:
-                unique_targets.get(target)['dataset_type'] = split_name
+                target_ = unique_targets.get(target)
+                if target_ is None:
+                    self._logger.warning(f"Target with id: {target}"
+                                         f" is not in provided unique targets\n{unique_targets}")
+                    continue
+                target_['dataset_type'] = split_name
         return unique_targets
